@@ -1,0 +1,15 @@
+# .NET build output
+bin/
+obj/
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Local overrides (may contain real connection strings)
+appsettings.*.local.json
+
+# Claude Code personal settings
+.claude/settings.local.json
