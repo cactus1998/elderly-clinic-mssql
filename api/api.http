@@ -1,0 +1,23 @@
+@api_HostAddress = http://localhost:5268
+
+### 門診清單：指定科別
+GET {{api_HostAddress}}/api/clinic?date=2026-11-05&deptId=1
+Accept: application/json
+
+### 門診清單：全部科別
+GET {{api_HostAddress}}/api/clinic?date=2026-11-05
+Accept: application/json
+
+### 病人最近 14 天生命徵象
+GET {{api_HostAddress}}/api/patients/3/vitals?days=14
+Accept: application/json
+
+### 找不到病人（404）
+GET {{api_HostAddress}}/api/patients/999/vitals
+Accept: application/json
+
+### 報到（BOOKED 改成 CHECKED_IN；第二次會回 409）
+PATCH {{api_HostAddress}}/api/appointments/10/checkin
+Accept: application/json
+
+###
