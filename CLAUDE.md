@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-樂齡門診掛號與健康追蹤系統：MS SQL Server + ASP.NET Core 8 Web API（Dapper）。
+樂齡門診掛號與健康追蹤系統：MS SQL Server + ASP.NET Core 8 Web API（Dapper）+ Vue 3 前端。
 資料全部是假資料。功能與執行方式見 `README.md`。
 
 ## 架構分層
@@ -10,6 +10,7 @@
 - `api/Dtos/`：回傳給前端的資料類別。屬性名稱與 SQL 欄位名稱一致（Dapper 依名稱對應）。
 - `api/Data/SqlConnectionFactory.cs`：唯一建立連線的地方。連線字串只從設定讀取。
 - `api/types/clinic-api.ts`：對應 DTO 的 TypeScript interface，DTO 改了這裡要同步（camelCase）。
+- `web/`：Vue 3 + TypeScript + Tailwind CSS v4 + Pinia。API 呼叫集中在 `src/api/client.ts`，狀態放 `src/stores/`。型別用 `@api-types/clinic-api` 引用 `api/types`，不要在 `web/` 重複定義。開發時 `/api` 由 Vite proxy 轉到 5268。
 - `database/`：`schema.sql`（重建資料表）、`seed.sql`（假資料）、`procedures.sql`（預存程序）。
 
 ## 規則
@@ -29,6 +30,14 @@
 cd api
 dotnet build                 # 必須 0 error、0 warning
 dotnet run                   # Swagger: http://localhost:5268/swagger
+```
+
+前端：
+
+```powershell
+cd web
+npm run build                # vue-tsc 型別檢查 + vite build，必須無錯誤
+npm run dev                  # http://localhost:5173（API 要先啟動）
 ```
 
 資料庫（本機 `localhost\SQLEXPRESS`，Windows 驗證）：

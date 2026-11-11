@@ -1,6 +1,6 @@
 # 樂齡門診掛號與健康追蹤系統
 
-以長者門診為情境的練習專案：MS SQL Server 資料庫，加上 ASP.NET Core 8 Web API（Dapper）。
+以長者門診為情境的練習專案：MS SQL Server 資料庫、ASP.NET Core 8 Web API（Dapper），加上 Vue 3 前端。
 資料全部是假資料，不含任何真實個資。
 
 ## 功能
@@ -22,11 +22,20 @@
 
 錯誤回應統一使用 ProblemDetails（RFC 9110）格式。
 
+### 前端（`web/`）
+
+Vue 3 + TypeScript + Tailwind CSS + Pinia（Vite）。
+
+- 門診清單：選日期查詢，可依科別篩選；狀態為「已掛號」的列可直接按「報到」
+- 點選病人：右側顯示最近 7 / 14 / 30 / 90 天生命徵象
+- API 錯誤（ProblemDetails）直接顯示在畫面上
+- 型別直接引用 `api/types/clinic-api.ts`，與後端 DTO 共用同一份定義
+
 ## 架構
 
 ```mermaid
 flowchart LR
-    Vue["Vue 3 前端<br/>（規劃中）"] -- "HTTP / JSON" --> Ctrl
+    Vue["Vue 3 前端<br/>TypeScript / Tailwind / Pinia"] -- "HTTP / JSON" --> Ctrl
     subgraph API["ASP.NET Core 8 Web API"]
         Ctrl["Controllers<br/>只處理 HTTP：參數驗證、狀態碼"] --> Repo["Repositories<br/>SQL 與 Dapper 參數"]
     end
@@ -41,6 +50,11 @@ api/
 ├─ Data/            SqlConnectionFactory（從 appsettings 讀連線字串）
 ├─ types/           對應 DTO 的 TypeScript interface，給前端使用
 └─ api.http         VS Code / Visual Studio 可直接送出的測試請求
+
+web/src/
+├─ api/client.ts    fetch 包裝，非 2xx 時解析 ProblemDetails 丟出 ApiError
+├─ stores/clinic.ts Pinia store：門診清單、報到、生命徵象
+└─ components/      ClinicList（清單與報到）、VitalsPanel（生命徵象）
 ```
 
 ## 如何執行
@@ -49,6 +63,7 @@ api/
 
 - SQL Server Express（執行個體 `localhost\SQLEXPRESS`，Windows 驗證）
 - .NET 8 SDK（`dotnet --list-sdks` 要看到 `8.0.xxx`）
+- Node.js 22.18 以上（前端）
 
 ### 1. 建立資料庫與假資料
 
@@ -78,7 +93,20 @@ dotnet run
 連線字串在 `api/appsettings.json` 的 `ConnectionStrings:ElderlyClinic`，
 也可以用環境變數 `ConnectionStrings__ElderlyClinic` 覆蓋。
 
-### 3. 測試
+### 3. 啟動前端
+
+API 保持執行，另開一個終端機：
+
+```powershell
+cd web
+npm install
+npm run dev
+```
+
+開啟 <http://localhost:5173>。Vite 開發伺服器會把 `/api` 轉送到 `http://localhost:5268`，
+所以 API 不需要設定 CORS。
+
+### 4. 測試
 
 在 Swagger 對每支 API 按「Try it out」，或用 `api/api.http` 直接送請求。
 
