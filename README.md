@@ -108,4 +108,4 @@ AI 負責產生草稿，所有變更都經過人工閱讀、`dotnet build` 與�
 
 - 假資料的掛號與量測日期由 `seed.sql` 依「執行當天」計算。文件中的 `date=2026-11-05` 只是範例，請換成你執行 seed 的那一天；隔天測試前先重跑 `schema.sql` 和 `seed.sql`。
 - vitals 的「最近 N 天」以資料庫當下時間 `SYSDATETIME()` 往回算。
-- `usp_GetClinicList` 目前沒有回傳 `AppointmentId`，前端若要從門診清單直接報到，需要在預存程序加上這個欄位。
+- `usp_GetClinicList` 回傳 `AppointmentId`、`PatientId`，前端用來直接報到與查詢生命徵象。更新預存程序後要重跑 `procedures.sql`。

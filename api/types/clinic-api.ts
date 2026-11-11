@@ -9,6 +9,8 @@ export type AppointmentStatus = 'BOOKED' | 'CHECKED_IN' | 'DONE' | 'CANCELLED';
 
 /** GET /api/clinic?date=yyyy-MM-dd&deptId=1  (ClinicListItemDto) */
 export interface ClinicListItem {
+  appointmentId: number;
+  patientId: number;
   deptName: string;
   doctorName: string;
   session: Session;

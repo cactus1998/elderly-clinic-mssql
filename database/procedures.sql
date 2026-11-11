@@ -21,7 +21,8 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    SELECT dp.DeptName, d.DoctorName, a.Session, a.SeqNo,
+    SELECT a.AppointmentId, a.PatientId,
+           dp.DeptName, d.DoctorName, a.Session, a.SeqNo,
            p.ChartNo, p.PatientName, a.Status
     FROM dbo.Appointments a
     JOIN dbo.Patients    p  ON a.PatientId = p.PatientId
