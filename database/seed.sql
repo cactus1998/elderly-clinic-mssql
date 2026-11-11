@@ -174,6 +174,14 @@ INSERT INTO dbo.VitalSigns (PatientId, MeasuredAt, SystolicBP, DiastolicBP, Hear
     (14, DATEADD(HOUR, 15, CAST(@today AS DATETIME2(0))), NULL, NULL, 54, N'自覺心跳慢，安排心電圖');
 GO
 
+/* ---------------------------------------------------------
+   測試帳號（只用於本機練習；部署到外部前必須刪除或更換密碼）
+   帳號 demo，密碼見 README「測試帳號」。這裡只存 PBKDF2 雜湊。
+   --------------------------------------------------------- */
+INSERT INTO dbo.Users (Username, PasswordHash, DisplayName) VALUES
+    ('demo', 'PBKDF2-SHA256$100000$FRCkkQTANsvsw3Wm3xdA7w==$85KeJNYLUGhzJG/Eh3Il0VEhPcYlqAawGusRJ9PGijE=', N'示範護理師');
+GO
+
 SET NOEXEC OFF;
 GO
 
@@ -182,5 +190,6 @@ SELECT N'Departments' AS TableName, COUNT(*) AS RowCnt FROM ElderlyClinic.dbo.De
 UNION ALL SELECT N'Doctors',      COUNT(*) FROM ElderlyClinic.dbo.Doctors
 UNION ALL SELECT N'Patients',     COUNT(*) FROM ElderlyClinic.dbo.Patients
 UNION ALL SELECT N'Appointments', COUNT(*) FROM ElderlyClinic.dbo.Appointments
-UNION ALL SELECT N'VitalSigns',   COUNT(*) FROM ElderlyClinic.dbo.VitalSigns;
+UNION ALL SELECT N'VitalSigns',   COUNT(*) FROM ElderlyClinic.dbo.VitalSigns
+UNION ALL SELECT N'Users',        COUNT(*) FROM ElderlyClinic.dbo.Users;
 GO

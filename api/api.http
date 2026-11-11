@@ -1,23 +1,114 @@
 @api_HostAddress = http://localhost:5268
 
+# 除了登入以外，所有 API 都需要 Authorization: Bearer {accessToken}。
+# 先送出「登入」，後面的請求會自動引用 login 回應中的 accessToken。
+# 測試帳號見 README「測試帳號」。
+
+### 登入（成功回 accessToken）
+# @name login
+POST {{api_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "demo",
+  "password": "Demo@2026"
+}
+
+### 登入失敗（401，不區分帳號或密碼錯誤；1 分鐘內超過 5 次回 429）
+POST {{api_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "demo",
+  "password": "wrong"
+}
+
+### 目前使用者
+GET {{api_HostAddress}}/api/auth/me
+Authorization: Bearer {{login.response.body.accessToken}}
+
+### 沒帶 token（401）
+GET {{api_HostAddress}}/api/clinic?date=2026-11-05
+
 ### 門診清單：指定科別
 GET {{api_HostAddress}}/api/clinic?date=2026-11-05&deptId=1
 Accept: application/json
+Authorization: Bearer {{login.response.body.accessToken}}
 
 ### 門診清單：全部科別
 GET {{api_HostAddress}}/api/clinic?date=2026-11-05
 Accept: application/json
+Authorization: Bearer {{login.response.body.accessToken}}
 
 ### 病人最近 14 天生命徵象
 GET {{api_HostAddress}}/api/patients/3/vitals?days=14
 Accept: application/json
+Authorization: Bearer {{login.response.body.accessToken}}
 
 ### 找不到病人（404）
 GET {{api_HostAddress}}/api/patients/999/vitals
 Accept: application/json
+Authorization: Bearer {{login.response.body.accessToken}}
+
+### 新增生命徵象（201）
+# @name createVital
+POST {{api_HostAddress}}/api/patients/3/vitals
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.accessToken}}
+
+{
+  "measuredAt": "2026-11-05T09:30:00",
+  "systolicBP": 128,
+  "diastolicBP": 78,
+  "heartRate": 70,
+  "bloodSugar": null,
+  "bodyWeight": null,
+  "note": "api.http 測試"
+}
+
+### 修改生命徵象（200，整筆取代）
+PUT {{api_HostAddress}}/api/vitals/{{createVital.response.body.vitalId}}
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.accessToken}}
+
+{
+  "measuredAt": "2026-11-05T09:30:00",
+  "systolicBP": 135,
+  "diastolicBP": 80,
+  "heartRate": 72,
+  "bloodSugar": null,
+  "bodyWeight": null,
+  "note": "已修改"
+}
+
+### 驗證失敗（400：收縮壓超出 50 到 260）
+PUT {{api_HostAddress}}/api/vitals/{{createVital.response.body.vitalId}}
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.accessToken}}
+
+{
+  "measuredAt": "2026-11-05T09:30:00",
+  "systolicBP": 999,
+  "diastolicBP": 80
+}
+
+### 刪除生命徵象（204；再送一次回 404）
+DELETE {{api_HostAddress}}/api/vitals/{{createVital.response.body.vitalId}}
+Authorization: Bearer {{login.response.body.accessToken}}
+
+### 新增時病人不存在（404）
+POST {{api_HostAddress}}/api/patients/999/vitals
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.accessToken}}
+
+{
+  "measuredAt": "2026-11-05T09:30:00",
+  "heartRate": 70
+}
 
 ### 報到（BOOKED 改成 CHECKED_IN；第二次會回 409）
 PATCH {{api_HostAddress}}/api/appointments/10/checkin
 Accept: application/json
+Authorization: Bearer {{login.response.body.accessToken}}
 
 ###

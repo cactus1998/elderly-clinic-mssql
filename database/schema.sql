@@ -30,6 +30,7 @@ DROP TABLE IF EXISTS dbo.Appointments;
 DROP TABLE IF EXISTS dbo.Patients;
 DROP TABLE IF EXISTS dbo.Doctors;
 DROP TABLE IF EXISTS dbo.Departments;
+DROP TABLE IF EXISTS dbo.Users;
 GO
 
 /* ---------------------------------------------------------
@@ -160,5 +161,23 @@ CREATE INDEX IX_VitalSigns_Patient_MeasuredAt
     ON dbo.VitalSigns (PatientId, MeasuredAt);
 GO
 
-PRINT N'schema.sql 執行完成：已建立 5 張資料表。';
+/* ---------------------------------------------------------
+   系統使用者（登入 API 用）
+   - PasswordHash：PBKDF2-SHA256 雜湊，格式為 演算法$迭代次數$salt$hash（Base64）。
+     絕對不存明碼密碼。
+   - IsActive = 0 的帳號不能登入（停用而不刪除，保留稽核紀錄）。
+   --------------------------------------------------------- */
+CREATE TABLE dbo.Users (
+    UserId       INT IDENTITY(1,1) NOT NULL,
+    Username     VARCHAR(50)       NOT NULL,
+    PasswordHash VARCHAR(200)      NOT NULL,
+    DisplayName  NVARCHAR(50)      NOT NULL,
+    IsActive     BIT               NOT NULL CONSTRAINT DF_Users_IsActive DEFAULT (1),
+    CreatedAt    DATETIME2(0)      NOT NULL CONSTRAINT DF_Users_CreatedAt DEFAULT (SYSDATETIME()),
+    CONSTRAINT PK_Users PRIMARY KEY (UserId),
+    CONSTRAINT UQ_Users_Username UNIQUE (Username)
+);
+GO
+
+PRINT N'schema.sql 執行完成：已建立 6 張資料表。';
 GO

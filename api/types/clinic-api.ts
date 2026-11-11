@@ -48,3 +48,37 @@ export interface ProblemDetails {
   /** Present on 400 validation errors: field name to messages */
   errors?: Record<string, string[]>;
 }
+
+/** POST /api/patients/{id}/vitals, PUT /api/vitals/{vitalId}  (VitalSignInput)
+ *  measuredAt: local time "yyyy-MM-ddTHH:mm:ss" without time zone. */
+export interface VitalSignInput {
+  measuredAt: string;
+  systolicBP: number | null;
+  diastolicBP: number | null;
+  heartRate: number | null;
+  bloodSugar: number | null;
+  bodyWeight: number | null;
+  note: string | null;
+}
+
+/** POST /api/auth/login  (LoginRequest) */
+export interface LoginRequest {
+  username: string;
+  password: string;
+}
+
+/** POST /api/auth/login response (ASP.NET Core bearer token handler).
+ *  Send accessToken as "Authorization: Bearer {accessToken}". */
+export interface AccessTokenResponse {
+  tokenType: 'Bearer';
+  accessToken: string;
+  /** Seconds until accessToken expires. */
+  expiresIn: number;
+  refreshToken: string;
+}
+
+/** GET /api/auth/me  (CurrentUserDto) */
+export interface CurrentUser {
+  username: string;
+  displayName: string;
+}
