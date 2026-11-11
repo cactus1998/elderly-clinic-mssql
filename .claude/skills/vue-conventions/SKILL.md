@@ -62,6 +62,7 @@ web/src/
 - 使用 Tailwind utility class，不寫 scoped CSS，除非 Tailwind 做不到。
 - 狀態徽章顏色集中在對照表（`statusClass`），同一狀態全站同一顏色，且一定附文字，不只靠顏色。
 - 版面 mobile-first：手機寬度單欄，`lg:` 以上才分欄；寬表格外層加 `overflow-x-auto`。
+- 畫面文案不寫方位（左側、右側、上方、下方），RWD 換版後方位會錯。改用區塊名稱，例如「門診清單中的病人」「生命徵象面板」。
 
 ## 病人資料（個資）
 

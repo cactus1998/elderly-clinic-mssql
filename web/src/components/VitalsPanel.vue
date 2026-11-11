@@ -48,7 +48,7 @@ function show(v: number | null): string {
 
 <template>
   <section class="rounded-xl bg-white p-4 shadow-sm">
-    <p v-if="!store.selected" class="py-6 text-center text-slate-400">點選左側病人查看生命徵象</p>
+    <p v-if="!store.selected" class="py-6 text-center text-slate-400">點選門診清單中的病人，查看生命徵象</p>
 
     <template v-else>
       <header class="mb-3 flex flex-wrap items-center justify-between gap-2">
