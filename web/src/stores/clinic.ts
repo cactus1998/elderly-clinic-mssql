@@ -31,6 +31,7 @@ export const useClinicStore = defineStore('clinic', () => {
 
   async function loadList() {
     const requestId = ++listRequestId
+    clearSelection()
     loading.value = true
     error.value = ''
     try {
@@ -91,6 +92,16 @@ export const useClinicStore = defineStore('clinic', () => {
     loadVitals()
   }
 
+  /** Clear the right-hand vitals panel (new query, logout). Ignores any in-flight vitals response. */
+  function clearSelection() {
+    vitalsRequestId++
+    selected.value = null
+    vitals.value = []
+    vitalsLoading.value = false
+    vitalsError.value = ''
+    saveError.value = ''
+  }
+
   // ---- Create / update / delete vitals ----
   const saving = ref(false)
   const saveError = ref('')
@@ -130,15 +141,11 @@ export const useClinicStore = defineStore('clinic', () => {
   /** Clear all data on logout so the next user never sees the previous user's screen. */
   function reset() {
     listRequestId++
-    vitalsRequestId++
+    clearSelection()
     date.value = today()
     deptName.value = ''
     list.value = []
     error.value = ''
-    selected.value = null
-    vitals.value = []
-    vitalsError.value = ''
-    saveError.value = ''
   }
 
   return {
