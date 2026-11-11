@@ -53,10 +53,17 @@ sqlcmd -S localhost\SQLEXPRESS -E -I -f 65001 -i procedures.sql
 
 ## 專案 Skill
 
-一般流程：`api-spec`、`add-api-endpoint`（需要時搭配 `db-change`）、`his-security-check`、`git-commit`。
+一般流程：`api-spec`、`add-api-endpoint`（需要時搭配 `db-change`）、`frontend-feature`、`his-security-check`、`git-commit`。
 
 - `api-spec`：實作前寫規格與驗收標準，存在 `docs/specs/`。
 - `add-api-endpoint`：新增一支 API。
 - `db-change`：修改資料表、約束、索引或預存程序。
 - `his-security-check`：提交前檢查醫療資料安全。
 - `git-commit`：預檢、機密檢查、繁體中文 Angular 規範 commit 訊息。不自動 push。
+
+前端（`web/`）：
+
+- `vue-conventions`：撰寫或修改 `web/src` 時套用的規範（元件、Pinia、API 呼叫、型別共用、個資）。
+- `frontend-feature`：新增前端功能區塊；後端不夠時先走 `add-api-endpoint`。
+- `add-tests`：Vitest 測試 store、api client、元件。首次使用需同意安裝套件。
+- `ui-review`：展示前的前端檢查清單，只回報，確認後才改。

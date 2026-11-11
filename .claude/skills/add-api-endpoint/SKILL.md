@@ -26,7 +26,7 @@ description: 在本專案新增或修改一支 Web API。使用時機：新增�
    - 400 用 `ValidationProblem(ModelState)`；404、409 用 `Problem(statusCode: ..., title: ...)`。
    - 加 `/// <summary>`、`<response>` 註解與 `[ProducesResponseType]`，讓 Swagger 顯示完整。
 6. **註冊**：新的 Repository 在 `Program.cs` 用 `AddScoped` 註冊。
-7. **前端型別**：`api/types/clinic-api.ts` 加對應 interface（camelCase，日期為 ISO 8601 字串）。
+7. **前端型別**：`api/types/clinic-api.ts` 加對應 interface（camelCase，日期為 ISO 8601 字串）。前端要用時在 `web/src/api/client.ts` 加方法，畫面部分交給 `frontend-feature`。
 8. **測試請求**：`api/api.http` 加成功與每種錯誤情境的請求。
 9. **文件**：`README.md` 的 API 表格加一列。
 

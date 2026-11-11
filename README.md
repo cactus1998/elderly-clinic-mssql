@@ -125,10 +125,14 @@ CLAUDE.md                          專案規範：架構分層、SQL 安全規�
 ├─ add-api-endpoint/   新增 API：Controller、Repository、DTO、TS 型別、api.http、README 一次到位
 ├─ db-change/          修改資料表或預存程序：同步 seed、DTO、前端型別，並說明對既有資料的影響
 ├─ his-security-check/ 醫療資料安全檢查：參數化查詢、個資不進 log、錯誤不洩漏內部資訊
-└─ git-commit/         提交前預檢與機密掃描，產生繁體中文 Angular 規範的 commit 訊息
+├─ git-commit/         提交前預檢與機密掃描，產生繁體中文 Angular 規範的 commit 訊息
+├─ vue-conventions/    前端規範：元件、Pinia、API 呼叫、共用型別、病人個資不進 localStorage / URL
+├─ frontend-feature/   新增前端功能：API 方法、store、元件、四種畫面狀態、瀏覽器實測
+├─ add-tests/          前端測試（Vitest + @vue/test-utils）：store、api client、元件
+└─ ui-review/          展示前前端檢查：型別一致、競態、錯誤處理、個資、無障礙、RWD
 ```
 
-開發流程：`api-spec` 寫規格，`add-api-endpoint` 實作，`his-security-check` 檢查，`git-commit` 提交。
+開發流程：`api-spec` 寫規格，`add-api-endpoint` 實作後端，`frontend-feature` 實作前端，`his-security-check` 與 `ui-review` 檢查，`git-commit` 提交。
 
 AI 負責產生草稿，所有變更都經過人工閱讀、`dotnet build` 與實際呼叫 API 驗證。
 
