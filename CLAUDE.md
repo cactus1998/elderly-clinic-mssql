@@ -9,6 +9,7 @@
 - `api/Repositories/`：SQL 與 Dapper 參數。一個資料表或一個業務主題一個 Repository。
 - `api/Dtos/`：回傳給前端的資料類別。屬性名稱與 SQL 欄位名稱一致（Dapper 依名稱對應）。
 - `api/Data/SqlConnectionFactory.cs`：唯一建立連線的地方。連線字串只從設定讀取。
+- `api/Security/`：密碼雜湊（PBKDF2）與限流政策名稱。驗證、授權、限流在 `Program.cs` 設定。
 - `api/types/clinic-api.ts`：對應 DTO 的 TypeScript interface，DTO 改了這裡要同步（camelCase）。
 - `web/`：Vue 3 + TypeScript + Tailwind CSS v4 + Pinia。API 呼叫集中在 `src/api/client.ts`，狀態放 `src/stores/`。型別用 `@api-types/clinic-api` 引用 `api/types`，不要在 `web/` 重複定義。開發時 `/api` 由 Vite proxy 轉到 5268。
 - `database/`：`schema.sql`（重建資料表）、`seed.sql`（假資料）、`procedures.sql`（預存程序）。
@@ -18,7 +19,9 @@
 - SQL 一律參數化（Dapper 匿名物件），禁止字串串接或插值組 SQL。
 - 多步驟寫入放在交易內；條件式更新用 `WHERE` 加條件，再依影響筆數判斷結果，不要先查再改。
 - 錯誤回應用 `Problem(...)` 或 `ValidationProblem(...)`（ProblemDetails），不回傳例外訊息或堆疊。
-- 病人姓名、病歷號等個資不寫進 log。
+- 病人姓名、病歷號等個資不寫進 log；登入失敗不記錄輸入的帳號與密碼。
+- 所有 API 預設需要登入（`Program.cs` 的 `FallbackPolicy`）。只有登入 API 可以 `[AllowAnonymous]`，新增匿名 API 前先詢問。
+- 密碼只存 `api/Security/PasswordHasher.cs` 產生的雜湊，不存明碼。
 - Repository 註冊為 Scoped，`SqlConnectionFactory` 為 Singleton，在 `Program.cs` 註冊。
 - 新增或修改 API 時，同步更新 `api/api.http` 與 `README.md` 的 API 表格。
 - 不新增套件，除非先說明理由並取得同意。

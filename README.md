@@ -7,27 +7,58 @@
 
 ### 資料庫（`database/`）
 
-- 5 張資料表：Departments 科別、Doctors 醫師、Patients 病人、Appointments 掛號、VitalSigns 生命徵象
+- 6 張資料表：Departments 科別、Doctors 醫師、Patients 病人、Appointments 掛號、VitalSigns 生命徵象、Users 系統使用者
 - 約束：主鍵、外鍵、UNIQUE、CHECK（性別、診別、掛號狀態、生命徵象合理範圍）
 - 篩選唯一索引：同一病人在同一醫師同一診只能有一筆有效掛號（已取消的不算）
 - 預存程序 `dbo.usp_GetClinicList`：查某天（某科）的門診清單（`procedures.sql`）
 
 ### Web API（`api/`）
 
+除了登入，所有 API 都要帶 `Authorization: Bearer {accessToken}`，沒帶或過期回 401。
+
 | 方法 | 路徑 | 說明 | 回應 |
 |---|---|---|---|
+| POST | `/api/auth/login` | 登入，回傳 `accessToken`（60 分鐘有效） | 200；帳號或密碼錯誤 401；同一 IP 1 分鐘超過 5 次 429 |
+| GET | `/api/auth/me` | 目前登入的使用者 | 200；401 |
 | GET | `/api/clinic?date=2026-11-05&deptId=1` | 呼叫 `usp_GetClinicList` 取得門診清單，`deptId` 可不傳 | 200；date 缺少或格式錯誤 400 |
 | GET | `/api/patients/{id}/vitals?days=14` | 病人最近 N 天生命徵象，依量測時間由新到舊 | 200；days 不在 1 到 365 為 400；病人不存在 404 |
+| POST | `/api/patients/{id}/vitals` | 新增一筆生命徵象 | 201；驗證失敗 400；病人不存在 404 |
+| PUT | `/api/vitals/{vitalId}` | 修改一筆生命徵象（整筆取代） | 200；驗證失敗 400；紀錄不存在 404 |
+| DELETE | `/api/vitals/{vitalId}` | 刪除一筆生命徵象 | 204；紀錄不存在 404 |
 | PATCH | `/api/appointments/{id}/checkin` | 報到：只有 `BOOKED` 能改成 `CHECKED_IN`，在交易內依影響筆數判斷結果 | 200；掛號不存在 404；狀態不是 BOOKED 409 |
 
 錯誤回應統一使用 ProblemDetails（RFC 9110）格式。
+
+生命徵象驗證：數值範圍與資料表 CHECK 約束相同；至少要有一項數值；收縮壓與舒張壓要一起填；量測時間不能是未來。
+
+### 登入與資安設計
+
+| 項目 | 做法 |
+|---|---|
+| 身分驗證 | 登入後發 Bearer token（ASP.NET Core 8 內建，以 Data Protection 加密），60 分鐘到期 |
+| 預設拒絕 | `FallbackPolicy` 要求所有 API 登入，只有登入 API 標 `[AllowAnonymous]`；新增 API 忘了加 `[Authorize]` 也不會變公開 |
+| 密碼儲存 | PBKDF2-SHA256、每個帳號獨立 salt、10 萬次迭代；資料庫不存明碼 |
+| 防暴力破解 | 登入 API 限流：同一 IP 每分鐘 5 次，超過回 429 |
+| 防帳號列舉 | 帳號不存在或密碼錯誤回同一個 401 訊息，並同樣執行雜湊運算，回應時間一致 |
+| 時序攻擊 | 雜湊比對用 `CryptographicOperations.FixedTimeEquals` |
+| log | 登入失敗只記錄來源 IP，不記錄輸入的帳號與密碼 |
+| SQL Injection | 全部參數化查詢 |
+| 前端 token | 存在 `sessionStorage`（關閉分頁即清除），收到 401 自動登出；登出時清除畫面上的病人資料 |
+| 帳號停用 | `Users.IsActive = 0` 不能登入，帳號保留供稽核 |
+
+部署到外部前還需要：HTTPS、更換或刪除測試帳號、CORS 只允許自己的前端網域、反向代理後依 `X-Forwarded-For` 限流。
+
+### 測試帳號
+
+本機練習用，由 `seed.sql` 建立：帳號 `demo`，密碼 `Demo@2026`。資料庫只存雜湊值。
 
 ### 前端（`web/`）
 
 Vue 3 + TypeScript + Tailwind CSS + Pinia（Vite）。
 
+- 登入畫面：登入後才能使用，右上角可登出；重新整理維持登入，token 過期自動回到登入畫面
 - 門診清單：選日期查詢，可依科別篩選；狀態為「已掛號」的列可直接按「報到」
-- 點選病人：右側顯示最近 7 / 14 / 30 / 90 天生命徵象
+- 點選病人：右側顯示最近 7 / 14 / 30 / 90 天生命徵象，可新增、編輯、刪除（刪除前確認）
 - API 錯誤（ProblemDetails）直接顯示在畫面上
 - 型別直接引用 `api/types/clinic-api.ts`，與後端 DTO 共用同一份定義
 
@@ -52,9 +83,10 @@ api/
 └─ api.http         VS Code / Visual Studio 可直接送出的測試請求
 
 web/src/
-├─ api/client.ts    fetch 包裝，非 2xx 時解析 ProblemDetails 丟出 ApiError
-├─ stores/clinic.ts Pinia store：門診清單、報到、生命徵象
-└─ components/      ClinicList（清單與報到）、VitalsPanel（生命徵象）
+├─ api/client.ts    fetch 包裝：自動帶 Bearer token，非 2xx 時解析 ProblemDetails 丟出 ApiError
+├─ stores/auth.ts   Pinia store：登入、登出、token 保存與驗證
+├─ stores/clinic.ts Pinia store：門診清單、報到、生命徵象 CRUD
+└─ components/      LoginForm、ClinicList、VitalsPanel、VitalForm（新增與編輯共用）
 ```
 
 ## 如何執行
@@ -108,9 +140,10 @@ npm run dev
 
 ### 4. 測試
 
-在 Swagger 對每支 API 按「Try it out」，或用 `api/api.http` 直接送請求。
+- Swagger：先用 `POST /api/auth/login` 取得 `accessToken`，按右上角「Authorize」貼上，再測其他 API。
+- `api/api.http`：先送「登入」，其他請求會自動帶入 token。
 
-報到 API 會真的改資料。測完想還原，依序重跑 `schema.sql`、`seed.sql`
+報到與生命徵象的新增、修改、刪除都會真的寫入資料庫。測完想還原，依序重跑 `schema.sql`、`seed.sql`
 （`seed.sql` 發現已有資料會停止，所以要先跑 `schema.sql` 清空）。
 
 ## AI 輔助開發（Claude Code）

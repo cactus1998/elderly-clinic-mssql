@@ -38,7 +38,14 @@ description: 檢查本專案變更是否符合醫療資料安全要求。使用�
 - 連線字串只在設定檔或環境變數，程式碼中沒有寫死。
 - 沒有提交密碼、金鑰、Token；含真實連線資訊的設定檔已列入 `.gitignore`。
 
-### 6. 資料一致性
+### 6. 身分驗證與授權
+
+- 新增的 Controller 或 action 沒有 `[AllowAnonymous]`（只有登入 API 可以）；`Program.cs` 的 `FallbackPolicy` 仍在。
+- 登入失敗回同一個 401 訊息，不透露是帳號還是密碼錯誤；登入 API 仍有 `[EnableRateLimiting]`。
+- 密碼只以 `PasswordHasher` 雜湊後存入；程式碼、log、回應中沒有明碼密碼或 token。
+- 前端 token 只存在 `sessionStorage`，病人資料不寫入任何 storage；登出會清除畫面資料。
+
+### 7. 資料一致性
 
 - 多步驟寫入在交易內，例外時 `Rollback`。
 - 狀態變更用條件式 `UPDATE ... WHERE Status = ...` 並檢查影響筆數，避免競態。

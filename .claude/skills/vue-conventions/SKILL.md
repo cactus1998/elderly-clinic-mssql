@@ -9,7 +9,7 @@ description: 本專案前端（web/，Vue 3 + TypeScript + Tailwind CSS v4 + Pin
 
 ```
 web/src/
-  api/client.ts     唯一呼叫 fetch 的地方；非 2xx 時解析 ProblemDetails 丟出 ApiError
+  api/client.ts     唯一呼叫 fetch 的地方；自動帶 Bearer token，收到 401 通知 auth store 登出
   stores/           Pinia setup store（useXxxStore）
   components/       畫面元件（PascalCase，至少兩個單字，例如 ClinicList.vue）
   App.vue           版面組裝
@@ -67,6 +67,8 @@ web/src/
 
 - 病人姓名、病歷號不寫入 `localStorage` / `sessionStorage`、不放進 URL query、不 `console.log`。
 - `localStorage` 只能存 UI 偏好（例如預設天數）。
+- access token 只存在 `sessionStorage`，由 `stores/auth.ts` 管理；元件不直接讀寫 token。
+- 登出時呼叫各 store 的 `reset()` 清掉病人資料，避免下一位使用者看到。
 
 ## 驗證
 
