@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import type { ClinicListItem, VitalSign } from '@api-types/clinic-api'
+import type { ClinicListItem, VitalSign, VitalSignInput } from '@api-types/clinic-api'
 import { api } from '@/api/client'
 
 /** Local date as yyyy-MM-dd (toISOString would shift to UTC). */
@@ -91,8 +91,59 @@ export const useClinicStore = defineStore('clinic', () => {
     loadVitals()
   }
 
+  // ---- Create / update / delete vitals ----
+  const saving = ref(false)
+  const saveError = ref('')
+  const deletingId = ref<number | null>(null)
+
+  /** Create when vitalId is omitted, otherwise update. Returns true on success. */
+  async function saveVital(input: VitalSignInput, vitalId?: number): Promise<boolean> {
+    if (!selected.value) return false
+    saving.value = true
+    saveError.value = ''
+    try {
+      if (vitalId === undefined) await api.createVital(selected.value.patientId, input)
+      else await api.updateVital(vitalId, input)
+      await loadVitals()
+      return true
+    } catch (e) {
+      saveError.value = message(e)
+      return false
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function deleteVital(vitalId: number) {
+    deletingId.value = vitalId
+    vitalsError.value = ''
+    try {
+      await api.deleteVital(vitalId)
+      vitals.value = vitals.value.filter((v) => v.vitalId !== vitalId)
+    } catch (e) {
+      vitalsError.value = message(e)
+    } finally {
+      deletingId.value = null
+    }
+  }
+
+  /** Clear all data on logout so the next user never sees the previous user's screen. */
+  function reset() {
+    listRequestId++
+    vitalsRequestId++
+    date.value = today()
+    deptName.value = ''
+    list.value = []
+    error.value = ''
+    selected.value = null
+    vitals.value = []
+    vitalsError.value = ''
+    saveError.value = ''
+  }
+
   return {
     date, deptName, list, loading, error, checkingIn, deptNames, filtered, loadList, checkIn,
     selected, days, vitals, vitalsLoading, vitalsError, loadVitals, selectPatient,
+    saving, saveError, deletingId, saveVital, deleteVital, reset,
   }
 })
