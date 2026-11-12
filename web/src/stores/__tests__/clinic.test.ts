@@ -146,6 +146,20 @@ describe('clinic store：報到', () => {
     await pending
     expect(clinic.checkingIn).toBeNull()
   })
+
+  it('報到處理中再按一次不會重複送出', async () => {
+    const response = deferred<{ appointmentId: number; status: 'CHECKED_IN' }>()
+    vi.mocked(api.checkIn).mockReturnValue(response.promise)
+    const clinic = useClinicStore()
+    const row = makeClinicRow({ appointmentId: 3 })
+
+    const first = clinic.checkIn(row)
+    await clinic.checkIn(row)
+    response.resolve({ appointmentId: 3, status: 'CHECKED_IN' })
+    await first
+
+    expect(api.checkIn).toHaveBeenCalledOnce()
+  })
 })
 
 describe('clinic store：登出重設', () => {

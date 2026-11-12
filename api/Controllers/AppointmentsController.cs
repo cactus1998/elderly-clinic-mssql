@@ -27,13 +27,24 @@ public class AppointmentsController : ControllerBase
         return outcome switch
         {
             CheckInOutcome.Success => Ok(new CheckInResultDto { AppointmentId = id, Status = currentStatus! }),
+            // detail is shown to the nurse as-is, so it is written in Chinese like the other APIs.
             CheckInOutcome.NotFound => Problem(
                 statusCode: StatusCodes.Status404NotFound,
-                title: $"Appointment {id} not found."),
+                title: "Resource not found.",
+                detail: "找不到這筆掛號。"),
             _ => Problem(
                 statusCode: StatusCodes.Status409Conflict,
-                title: $"Appointment {id} cannot be checked in.",
-                detail: $"Current status is {currentStatus}; only BOOKED can be checked in."),
+                title: "Conflict.",
+                detail: $"這筆掛號目前是「{StatusLabel(currentStatus)}」，只有「已掛號」可以報到。"),
         };
     }
+
+    private static string StatusLabel(string? status) => status switch
+    {
+        "BOOKED" => "已掛號",
+        "CHECKED_IN" => "已報到",
+        "DONE" => "已看診",
+        "CANCELLED" => "已取消",
+        _ => status ?? "未知",
+    };
 }

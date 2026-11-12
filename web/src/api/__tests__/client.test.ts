@@ -127,13 +127,39 @@ describe('api client：錯誤', () => {
   })
 
   it('body 不是 JSON 時顯示 HTTP 狀態碼', async () => {
-    stubFetch(new Response('Bad Gateway', { status: 502 }))
+    stubFetch(new Response('Teapot', { status: 418 }))
 
     const error = await caught(api.me())
 
-    expect(error.status).toBe(502)
+    expect(error.status).toBe(418)
     expect(error.problem).toBeNull()
-    expect(error.message).toBe('HTTP 502')
+    expect(error.message).toBe('HTTP 418')
+  })
+
+  it.each([502, 503, 504])('API 停止（proxy 回 %i）時顯示無法連線', async (status) => {
+    stubFetch(new Response('Bad Gateway', { status }))
+
+    const error = await caught(api.me())
+
+    expect(error.status).toBe(status)
+    expect(error.message).toBe('無法連線到伺服器，請稍後再試')
+  })
+
+  it('500 沒有說明時顯示一般錯誤訊息，不顯示技術細節', async () => {
+    stubFetch(new Response(null, { status: 500 }))
+
+    const error = await caught(api.me())
+
+    expect(error.message).toBe('伺服器發生錯誤，請稍後再試')
+  })
+
+  it('網路中斷（fetch 失敗）時轉成 ApiError，狀態碼為 0', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+
+    const error = await caught(api.me())
+
+    expect(error.status).toBe(0)
+    expect(error.message).toBe('無法連線到伺服器，請稍後再試')
   })
 
   it('已登入時收到 401：觸發登出處理', async () => {

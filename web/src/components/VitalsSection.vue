@@ -40,6 +40,7 @@ async function save(input: VitalSignInput) {
 }
 
 async function remove(v: VitalSign) {
+  if (store.deletingId !== null) return
   const ok = await ui.confirm({
     title: '刪除量測紀錄',
     message: `確定刪除 ${fmtTime(v.measuredAt)} 的量測紀錄？刪除後無法復原。`,
@@ -143,7 +144,7 @@ function show(v: number | null): string {
                 <button type="button" class="link-action" @click="openForm(v)">編輯</button>
                 <button
                   type="button"
-                  :disabled="store.deletingId === v.vitalId"
+                  :aria-disabled="store.deletingId === v.vitalId"
                   class="link-action-danger"
                   @click="remove(v)"
                 >

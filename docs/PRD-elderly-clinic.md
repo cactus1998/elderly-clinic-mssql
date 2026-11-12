@@ -1,6 +1,6 @@
 # PRD：門診資訊系統（elderly-clinic）
 
-> 版本：1.4.0 ｜ 狀態：進行中（Should 未實作） ｜ 最後更新：2026-11-12
+> 版本：1.5.0 ｜ 狀態：進行中（Should 未實作） ｜ 最後更新：2026-11-12
 
 > 全專案總規格。功能 PRD（`PRD-<slug>.md`）的範圍必須落在本文件之內；需要超出時，先更新本文件。
 
@@ -91,8 +91,9 @@ flowchart LR
 ```
 database/   schema.sql（重建資料表）、seed.sql（假資料）、procedures.sql（預存程序）
 api/        Controllers、Repositories、Dtos、Security、types/clinic-api.ts（前端共用型別）
-web/        src/api/client.ts、src/stores/、src/components/
-docs/       PRD 與規格
+web/        src/api/client.ts、src/router/、src/views/（每頁一個）、src/components/、
+            src/composables/（網址參數與分頁）、src/stores/、各資料夾的 __tests__/（Vitest）
+docs/       PRD 與規格（清單見 docs/README.md）
 ```
 
 ## 資料與介面
@@ -101,14 +102,14 @@ docs/       PRD 與規格
 
 | 資料表 | 用途 | 重點約束 |
 |--------|------|----------|
-| Departments | 科別 | `DeptCode` UNIQUE |
+| Departments | 科別 | `DeptCode` UNIQUE；`IsActive` 停用 |
 | Doctors | 醫師 | FK 到科別；`IsActive` 標記在職 |
-| Patients | 病人 | `ChartNo` 病歷號 UNIQUE；`Gender` CHECK |
+| Patients | 病人 | `ChartNo` 病歷號 UNIQUE（序列產生）；`Gender` CHECK；`IsActive` 停用 |
 | Appointments | 掛號 | `Status` CHECK；同醫師同日同診看診號 UNIQUE；篩選唯一索引防重複掛號（已取消不算） |
 | VitalSigns | 生命徵象 | 各數值 CHECK 合理範圍，可為 NULL |
 | Users | 系統使用者 | `Username` UNIQUE；`PasswordHash` 只存 PBKDF2 雜湊；`IsActive` 停用而不刪除 |
 
-假資料：5 科、8 位醫師（1 位離職）、20 位病人、約 30 筆掛號、約 280 筆生命徵象、1 個測試帳號。掛號與量測日期依執行 `seed.sql` 當天計算。
+假資料：6 科（1 科停用）、8 位醫師（1 位停用）、60 位病人（1 位停用）、29 筆掛號、約 945 筆生命徵象、1 個測試帳號。掛號與量測日期依執行 `seed.sql` 當天計算。基本資料、醫師與科別的表結構細節見 [PRD-master-data.md](PRD-master-data.md)。
 
 ### API
 
@@ -119,13 +120,16 @@ docs/       PRD 與規格
 | POST | `/api/auth/login` | 登入，回傳 `accessToken`（60 分鐘） | 200；401；429 |
 | GET | `/api/auth/me` | 目前使用者 | 200；401 |
 | GET | `/api/clinic?date=&deptId=` | 門診清單（呼叫 `usp_GetClinicList`，不含已取消） | 200；400 |
-| PATCH | `/api/appointments/{id}/checkin` | 報到 | 200；404；409 |
-| GET | `/api/patients/{id}/vitals?days=` | 最近 N 天生命徵象，`days` 1 到 365 | 200；400；404 |
-| POST | `/api/patients/{id}/vitals` | 新增生命徵象 | 201；400；404 |
-| PUT | `/api/vitals/{vitalId}` | 修改生命徵象（整筆取代） | 200；400；404 |
-| DELETE | `/api/vitals/{vitalId}` | 刪除生命徵象 | 204；404 |
+| PATCH | `/api/appointments/{id}/checkin` | 報到 | 200；404；409（訊息說明目前狀態） |
+| GET | `/api/patients/{id}/vitals?days=&page=&pageSize=` | 最近 N 天生命徵象（分頁），`days` 1 到 365 | 200；400；404 |
+| POST | `/api/patients/{id}/vitals` | 新增生命徵象 | 201；400；404；409（病人已停用） |
+| PUT | `/api/vitals/{vitalId}` | 修改生命徵象（整筆取代） | 200；400；404；409 |
+| DELETE | `/api/vitals/{vitalId}` | 刪除生命徵象 | 204；404；409 |
+| GET / POST / PUT / PATCH | `/api/patients`、`/api/doctors`、`/api/departments` | 基本資料清單（分頁）、新增、修改（樂觀併發）、停用與啟用 | 見 [PRD-master-data.md](PRD-master-data.md) |
 
-生命徵象輸入規則：數值範圍與資料表 CHECK 相同（收縮壓 50–260、舒張壓 30–160、心跳 20–250、血糖 20–800、體重 10–300）；至少一項數值；收縮壓與舒張壓成對；量測時間不得晚於現在 5 分鐘。
+完整 API 表（含每個狀態碼的原因）以 `README.md` 為準。
+
+生命徵象輸入規則：數值範圍與資料表 CHECK 相同（收縮壓 50–260、舒張壓 30–160、心跳 20–250、血糖 20–800、體重 10–300）；至少一項數值；收縮壓與舒張壓成對，且收縮壓必須大於舒張壓（避免兩格填反）；量測時間不得晚於現在 5 分鐘。
 
 型別：C# DTO 與 `api/types/clinic-api.ts` 一一對應（camelCase），前端以 `@api-types/clinic-api` 直接引用，不重複定義。
 
@@ -133,10 +137,11 @@ docs/       PRD 與規格
 
 | 區塊 | 內容 |
 |------|------|
-| 登入畫面 | 帳號、密碼；錯誤時顯示「帳號或密碼錯誤」或「嘗試次數過多」 |
-| 頁首 | 系統名稱、使用者顯示名稱、登出 |
-| 門診清單 | 日期、科別篩選、查詢；狀態徽章；「已掛號」列顯示報到按鈕 |
-| 生命徵象面板 | 選取的病人、天數切換、新增量測、每列編輯與刪除 |
+| 登入畫面 | 帳號、密碼；錯誤時顯示「帳號或密碼錯誤」或「嘗試次數過多」；登入後回到原本要去的頁面 |
+| 頁首 | 系統名稱、導覽列（門診作業、病人、醫師、科別）、使用者顯示名稱、登出 |
+| 門診作業 | 門診清單：日期、科別篩選、查詢；狀態徽章；「已掛號」列顯示報到按鈕，報到後焦點移到同列病人姓名；沒有門診時引導到病人頁 |
+| 生命徵象面板 | 選取的病人、天數切換、新增量測、每列編輯與刪除、分頁；門診作業與病人詳細頁共用 |
+| 病人、醫師、科別 | 清單、搜尋與分頁（狀態放在網址），新增、編輯、停用與啟用；見 [PRD-master-data.md](PRD-master-data.md) |
 
 寬螢幕（`lg` 以上）兩欄，窄螢幕單欄上下排列；文案不使用方位詞。
 
@@ -160,6 +165,7 @@ stateDiagram-v2
     [*] --> LoggedOut : 沒有 token
     Checking --> LoggedIn : /api/auth/me 成功
     Checking --> LoggedOut : 401
+    Checking --> Checking : 伺服器連不上（保留 token、顯示錯誤，下次換頁再試）
     LoggedOut --> LoggedIn : 登入成功
     LoggedIn --> LoggedOut : 登出，或任何 API 回 401
 ```
@@ -174,12 +180,12 @@ stateDiagram-v2
 | EC-04 | 門診清單日期缺少或格式錯誤 | 400 |
 | EC-05 | 報到時掛號不存在／狀態不是 BOOKED | 404／409，狀態不變 |
 | EC-06 | 兩人同時報到同一筆 | 條件式 UPDATE，只有一人成功，另一人 409 |
-| EC-07 | 生命徵象數值超出範圍、只填收縮壓、沒有任何數值 | 400，不寫入 |
+| EC-07 | 生命徵象數值超出範圍、只填收縮壓、收縮壓不大於舒張壓、沒有任何數值 | 400，不寫入 |
 | EC-08 | 新增時病人不存在／修改刪除時紀錄不存在 | 404 |
 | EC-09 | 快速切換病人或天數，舊回應晚到 | 以請求序號丟棄過期回應 |
 | EC-10 | 重新查詢門診清單 | 清空生命徵象面板 |
 | EC-11 | 登出 | 清除 token 與畫面上的病人資料 |
-| EC-12 | API 停止或資料庫無法連線 | 前端顯示錯誤訊息；後端回 ProblemDetails 500，不洩漏堆疊 |
+| EC-12 | API 停止或資料庫無法連線 | 前端顯示「無法連線到伺服器，請稍後再試」或「伺服器發生錯誤，請稍後再試」，不登出；後端回 ProblemDetails 500，不洩漏堆疊 |
 
 ## 非功能需求
 
@@ -208,7 +214,7 @@ stateDiagram-v2
 - [x] AC-05：Given 選取病人，When 新增一筆合法量測，Then 列表出現該筆且資料庫有新資料列
 - [x] AC-06：Given 一筆量測，When 修改後儲存，Then 列表與資料庫都更新
 - [x] AC-07：Given 一筆量測，When 確認刪除，Then 列表移除且資料庫刪除（API 回 204）
-- [x] AC-08：EC-01 到 EC-11 皆通過（API 以 curl 與 `api.http` 驗證，前端以瀏覽器操作驗證）
+- [x] AC-08：EC-01 到 EC-12 皆通過（API 以 curl 與 `api.http` 驗證，前端以瀏覽器操作驗證）
 - [ ] AC-09：Should 範圍（稽核、軟刪除、帳號鎖定）完成
 - [x] AC-10：基本資料維護與分頁完成（[PRD-master-data.md](PRD-master-data.md) 驗收標準全部通過）
 
@@ -242,3 +248,4 @@ stateDiagram-v2
 | 2026-11-12 | 新增 `unit-test` skill（取代 `add-tests`）：前端單元測試規範與流程 |
 | 2026-11-12 | 範圍新增前端單元測試（[PRD-frontend-unit-tests.md](PRD-frontend-unit-tests.md)）：Vitest + @vue/test-utils + jsdom |
 | 2026-11-12 | 單元測試發現並修正清單重複查詢（網址預設值、超出頁碼修正網址）；PRD-master-data 1.2.2 |
+| 2026-11-12 | 1.5.0：逐條操作網站驗收，修正：報到錯誤訊息改中文並說明目前狀態；API 停止時顯示可理解的訊息、重新整理不登出；醫師頁錯誤只顯示一個提示框；對話框關閉後焦點回到開啟的按鈕；報到防連點、報到後焦點不遺失；新增規則「收縮壓必須大於舒張壓」。內文對齊實作：假資料數量、API 表、目錄、前端畫面、登入狀態圖；PRD-master-data 1.2.3、PRD-frontend-unit-tests 1.2.0 |

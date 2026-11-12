@@ -77,17 +77,27 @@ export const useAuthStore = defineStore('auth', () => {
     useDepartmentsStore().reset()
   }
 
-  /** On page load: if a token is stored, confirm it is still valid. Runs once; callers await it. */
+  /**
+   * On page load: if a token is stored, confirm it is still valid. Callers await it; concurrent
+   * calls share one request. Only a 401 discards the token. If the server cannot be reached,
+   * the token is kept and the next navigation tries again.
+   */
   let restoring: Promise<void> | null = null
   function restore(): Promise<void> {
     restoring ??= (async () => {
-      if (!token.value) return
+      if (!token.value || user.value) return
       setAccessToken(token.value)
       checking.value = true
       try {
         user.value = await api.me()
-      } catch {
-        logout()
+        error.value = ''
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 401) {
+          logout()
+        } else {
+          error.value = e instanceof Error ? e.message : String(e)
+          restoring = null // allow a retry later
+        }
       } finally {
         checking.value = false
       }

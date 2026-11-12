@@ -28,7 +28,7 @@
 @layer components {
   /* ---- Buttons ---- */
   .btn {
-    @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-md px-4 text-sm font-medium whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-md px-4 text-sm font-medium whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50;
   }
   .btn-sm {
     @apply h-8 px-3;
@@ -47,10 +47,10 @@
   }
   /* Text buttons for row actions in tables. */
   .link-action {
-    @apply rounded-sm text-sm font-medium text-sky-700 hover:text-sky-900 hover:underline disabled:cursor-not-allowed disabled:opacity-50;
+    @apply rounded-sm text-sm font-medium text-sky-700 hover:text-sky-900 hover:underline disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50;
   }
   .link-action-danger {
-    @apply rounded-sm text-sm font-medium text-rose-700 hover:text-rose-900 hover:underline disabled:cursor-not-allowed disabled:opacity-50;
+    @apply rounded-sm text-sm font-medium text-rose-700 hover:text-rose-900 hover:underline disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50;
   }
 
   /* ---- Forms ---- */

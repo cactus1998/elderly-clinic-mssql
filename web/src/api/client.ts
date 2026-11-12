@@ -46,6 +46,10 @@ export class ApiError extends Error {
     // One rule can report the same message under several fields; show it once.
     if (p?.errors) return [...new Set(Object.values(p.errors).flat())].join('；')
     if (p?.detail) return p.detail
+    // 0 = network error; 502/503/504 = the dev proxy or a gateway cannot reach the API.
+    if (status === 0 || status === 502 || status === 503 || status === 504) return '無法連線到伺服器，請稍後再試'
+    // Server errors carry only a generic English title; never show technical text to users.
+    if (status >= 500) return '伺服器發生錯誤，請稍後再試'
     if (p?.title) return p.title
     if (status === 401) return '登入已過期，請重新登入'
     return `HTTP ${status}`
@@ -72,7 +76,13 @@ async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
   if (init.body) headers.set('Content-Type', 'application/json')
   if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`)
 
-  const res = await fetch(url, { ...init, headers })
+  let res: Response
+  try {
+    res = await fetch(url, { ...init, headers })
+  } catch {
+    // Network down or the request was blocked: report it like any other API error.
+    throw new ApiError(0, null)
+  }
   if (!res.ok) {
     // Body is ProblemDetails for 400/401/404/409/429/500; it may be empty (401 from the
     // auth middleware, or proxy 502/504 when the API is down).

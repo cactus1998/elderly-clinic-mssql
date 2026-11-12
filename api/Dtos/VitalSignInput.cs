@@ -45,6 +45,13 @@ public class VitalSignInput : IValidatableObject
                 "收縮壓與舒張壓要一起填寫。",
                 [nameof(SystolicBP), nameof(DiastolicBP)]);
         }
+        else if (SystolicBP <= DiastolicBP)
+        {
+            // Usually means the two values were typed into the wrong boxes.
+            yield return new ValidationResult(
+                "收縮壓必須大於舒張壓，請確認是否填反。",
+                [nameof(SystolicBP), nameof(DiastolicBP)]);
+        }
 
         if (MeasuredAt > DateTime.Now.AddMinutes(5))
         {

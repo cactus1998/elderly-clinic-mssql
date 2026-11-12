@@ -52,6 +52,7 @@ export const useClinicStore = defineStore('clinic', () => {
   }
 
   async function checkIn(row: ClinicListItem) {
+    if (checkingIn.value === row.appointmentId) return // double click
     checkingIn.value = row.appointmentId
     error.value = ''
     try {

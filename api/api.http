@@ -92,6 +92,17 @@ Authorization: Bearer {{login.response.body.accessToken}}
   "diastolicBP": 80
 }
 
+### 驗證失敗（400：收縮壓必須大於舒張壓，例如兩格填反）
+PUT {{api_HostAddress}}/api/vitals/{{createVital.response.body.vitalId}}
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.accessToken}}
+
+{
+  "measuredAt": "2026-11-05T09:30:00",
+  "systolicBP": 80,
+  "diastolicBP": 120
+}
+
 ### 刪除生命徵象（204；再送一次回 404）
 DELETE {{api_HostAddress}}/api/vitals/{{createVital.response.body.vitalId}}
 Authorization: Bearer {{login.response.body.accessToken}}

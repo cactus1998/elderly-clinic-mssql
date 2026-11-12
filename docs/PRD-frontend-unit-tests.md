@@ -1,6 +1,6 @@
 # PRD：前端單元測試（frontend-unit-tests）
 
-> 版本：1.1.0 ｜ 狀態：進行中（待使用者驗收） ｜ 最後更新：2026-11-12
+> 版本：1.2.0 ｜ 狀態：進行中（待使用者驗收） ｜ 最後更新：2026-11-12
 
 ## 目標
 
@@ -15,7 +15,7 @@
 - api client：`api/client.ts`（token、ProblemDetails、401 處理、query 組法）。
 - composable：`usePagedQuery`。
 - Pinia store：`auth`、`clinic`、`ui`、`masterData`、`vitals`。
-- 元件：`PaginationBar`、`VitalForm`、`StatusBadge`。
+- 元件：`PaginationBar`、`VitalForm`、`StatusBadge`、`AppDialog`（焦點）、`ClinicList`（報到後焦點、空狀態）。
 
 **不包含**
 - 後端測試（之後另外規劃 xUnit）。
@@ -48,6 +48,9 @@
 - [x] AC-09：分頁列頁碼與省略號正確、第一頁與最後一頁停用對應按鈕、切換頁碼與每頁筆數送出事件
 - [x] AC-10：量測表單空白欄位送出 `null`、備註去除空白、編輯時帶入原值
 - [x] AC-11：每個測試在故意改壞被測程式時會失敗（抽查）
+- [x] AC-12：api client 連線失敗與 502 / 503 / 504 顯示「無法連線到伺服器，請稍後再試」，500 以上顯示「伺服器發生錯誤，請稍後再試」；伺服器連不上時還原登入不登出
+- [x] AC-13：報到處理中再按不重複送出；報到成功後焦點移到同列病人姓名
+- [x] AC-14：對話框關閉後焦點回到開啟的按鈕（含 Safari 滑鼠點擊不聚焦）；按鈕已移除時移到主要內容
 
 ## 開發紀錄
 
@@ -60,25 +63,27 @@
 - `package.json`：`test`（監看）、`test:run`（執行一次）。
 - 共用工具 `src/__tests__/helpers.ts`：`deferred()`（手動控制回應順序）、`paged()`、`makeClinicRow()`、`makeVital()`，資料都是明顯的假資料。
 
-**測試清單（12 個檔案、127 個測試）**
+**測試清單（14 個檔案、142 個測試）**
 
 | 檔案 | 測試數 | 對應 AC |
 |------|--------|---------|
 | `composables/__tests__/routeQuery.test.ts` | 36 | AC-03、AC-04 |
 | `composables/__tests__/useListRoute.test.ts` | 9 | AC-06（網址修正與請求次數）、上一頁、離開頁面 |
-| `api/__tests__/client.test.ts` | 12 | AC-05 |
+| `api/__tests__/client.test.ts` | 17 | AC-05、AC-12 |
 | `composables/__tests__/usePagedQuery.test.ts` | 8 | AC-06 |
-| `stores/__tests__/auth.test.ts` | 10 | AC-07 |
-| `stores/__tests__/clinic.test.ts` | 10 | AC-08 |
+| `stores/__tests__/auth.test.ts` | 11 | AC-07、AC-12 |
+| `stores/__tests__/clinic.test.ts` | 11 | AC-08、AC-13 |
 | `stores/__tests__/vitals.test.ts` | 7 | 新增回第 1 頁、修改停在原頁、錯誤訊息 |
 | `stores/__tests__/masterData.test.ts` | 6 | 關鍵字去空白、科別選項快取清除 |
 | `stores/__tests__/ui.test.ts` | 6 | toast 類型與計時、確認對話框 |
 | `components/__tests__/PaginationBar.test.ts` | 12 | AC-09 |
 | `components/__tests__/VitalForm.test.ts` | 9 | AC-10 |
 | `components/__tests__/StatusBadge.test.ts` | 2 | 狀態一定有文字 |
+| `components/__tests__/AppDialog.test.ts` | 5 | AC-14、Esc 關閉、關閉按鈕 `aria-label` |
+| `components/__tests__/ClinicList.test.ts` | 3 | AC-13、報到失敗焦點不動、沒有門診的引導 |
 
 **驗證方式**
-- `npm run test:run`：127 個全部通過；不需要 API 與資料庫，約 2 秒。
+- `npm run test:run`：142 個全部通過；不需要 API 與資料庫，約 2 秒。
 - `npm run build` 無錯誤（含測試檔型別檢查）；`dist/` 不含測試程式與測試資料。
 - AC-11 抽查：暫時改壞程式再跑測試，三處都被抓到後改回。
   - `safeRedirect` 拿掉 `//` 檢查：「協定相對網址」測試失敗。
@@ -98,9 +103,18 @@
 - 王阿明詳細頁：生命徵象 30 天 116 筆，每頁 50 筆共 3 頁，第 3 頁為第 101–116 筆，每次操作 1 次請求。
 - 門診作業：選取病人顯示生命徵象，重新查詢後清空面板。console 沒有錯誤。
 
+**第二輪逐條驗收新增的測試（2026-11-12）**
+
+操作網站時發現的問題都先補測試（紅燈）再修正，詳見 [PRD-master-data.md](PRD-master-data.md) 1.2.3：
+- `client.test.ts`：502 / 503 / 504、500、連線失敗的訊息（AC-12）。
+- `auth.test.ts`：伺服器連不上時保留 token，恢復後再呼叫可登入（AC-12）。
+- `clinic.test.ts`：報到處理中再按不重複送出（AC-13）。
+- `AppDialog.test.ts`、`ClinicList.test.ts`：焦點返回與報到後焦點（AC-13、AC-14）。抽查：拿掉 `ClinicList` 的移動焦點那一行，「報到成功後…焦點移到同一列的病人姓名」測試失敗。
+
 ## 變更紀錄
 
 | 版本 | 日期 | 類型 | 內容 | 原因 | 影響 |
 |------|------|------|------|------|------|
+| 1.2.0 | 2026-11-12 | 需求調整 | 範圍加入 `AppDialog`、`ClinicList`；新增 AC-12 到 AC-14 | 第二輪逐條驗收發現錯誤訊息、登出、焦點問題 | `client.ts`、`auth.ts`、`clinic.ts`、`AppDialog`、`ClinicList` |
 | 1.1.0 | 2026-11-12 | 需求調整 | 範圍加入 `useListRoute` 測試；修正測試發現的兩個問題 | 測試與瀏覽器驗證發現重複查詢 | `routeQuery`、`useListRoute` |
 | 1.0.0 | 2026-11-12 | 初版 | 前端單元測試範圍與驗收標準 | 使用者要求補單元測試 | `web/` 測試環境 |

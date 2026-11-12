@@ -115,6 +115,29 @@ describe('auth store：還原登入', () => {
     expect(sessionStorage.getItem(TOKEN_KEY)).toBeNull()
   })
 
+  it('伺服器連不上時不登出：保留 token、顯示錯誤，之後可以再試', async () => {
+    // Arrange
+    sessionStorage.setItem(TOKEN_KEY, 'saved-token')
+    vi.mocked(api.me).mockRejectedValueOnce(new ApiError(0, null)).mockResolvedValueOnce(user)
+    const auth = useAuthStore()
+
+    // Act
+    await auth.restore()
+
+    // Assert：還沒登入，但 token 還在
+    expect(auth.isLoggedIn).toBe(false)
+    expect(auth.expired).toBe(false)
+    expect(auth.error).toBe('無法連線到伺服器，請稍後再試')
+    expect(sessionStorage.getItem(TOKEN_KEY)).toBe('saved-token')
+
+    // Act：伺服器恢復後再呼叫一次
+    await auth.restore()
+
+    // Assert
+    expect(auth.isLoggedIn).toBe(true)
+    expect(auth.error).toBe('')
+  })
+
   it('同時呼叫多次只驗證一次', async () => {
     sessionStorage.setItem(TOKEN_KEY, 'saved-token')
     vi.mocked(api.me).mockResolvedValue(user)

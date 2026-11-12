@@ -1,3 +1,18 @@
+<script lang="ts">
+// Shared by all dialogs: the last button / link the user pressed with a pointer.
+let lastPointerControl: HTMLElement | null = null
+if (typeof document !== 'undefined') {
+  document.addEventListener(
+    'pointerdown',
+    (e) => {
+      const target = e.target instanceof Element ? e.target.closest('button, a[href], [tabindex]') : null
+      lastPointerControl = target instanceof HTMLElement ? target : null
+    },
+    { capture: true },
+  )
+}
+</script>
+
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, useTemplateRef, watch } from 'vue'
 
@@ -7,6 +22,16 @@ const emit = defineEmits<{ close: [] }>()
 const dialog = useTemplateRef<HTMLDialogElement>('dialog')
 let returnFocus: HTMLElement | null = null
 
+/**
+ * The element that should get focus back when the dialog closes. Safari (and some mouse clicks)
+ * do not focus a clicked button, so fall back to the last control the pointer pressed.
+ */
+function openerElement(): HTMLElement | null {
+  const active = document.activeElement
+  if (active instanceof HTMLElement && active !== document.body) return active
+  return lastPointerControl
+}
+
 // Native <dialog> + showModal(): focus stays inside, Esc fires "cancel", background is inert.
 watch(
   () => open,
@@ -15,7 +40,7 @@ watch(
     const el = dialog.value
     if (!el) return
     if (isOpen && !el.open) {
-      returnFocus = document.activeElement as HTMLElement | null
+      returnFocus = openerElement()
       el.showModal()
     } else if (!isOpen && el.open) {
       el.close()
@@ -25,8 +50,10 @@ watch(
 )
 
 function onClose() {
-  // Return focus to the button that opened the dialog.
-  returnFocus?.focus()
+  // Return focus to the button that opened the dialog. If it is gone (e.g. its row was deleted),
+  // move focus to the main content instead of leaving it on <body>.
+  if (returnFocus?.isConnected) returnFocus.focus()
+  else document.querySelector<HTMLElement>('main[tabindex]')?.focus()
   returnFocus = null
   if (open) emit('close')
 }

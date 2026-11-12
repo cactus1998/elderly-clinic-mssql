@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import type { AppointmentStatus, Session } from '@api-types/clinic-api'
+import { nextTick, onMounted } from 'vue'
+import type { AppointmentStatus, ClinicListItem, Session } from '@api-types/clinic-api'
 import { useClinicStore } from '@/stores/clinic'
 
 const store = useClinicStore()
@@ -22,6 +22,18 @@ const statusClass: Record<AppointmentStatus, string> = {
 }
 
 const isSelected = (appointmentId: number) => store.selected?.appointmentId === appointmentId
+
+/**
+ * After a successful check-in the 報到 button disappears. Move focus to the patient name in the
+ * same row so keyboard users do not lose their place.
+ */
+async function checkIn(row: ClinicListItem, e: Event) {
+  const tr = (e.currentTarget as HTMLElement).closest('tr')
+  await store.checkIn(row)
+  if (row.status === 'BOOKED') return
+  await nextTick()
+  tr?.querySelector<HTMLElement>('button[aria-pressed]')?.focus()
+}
 
 // Keep the previous query when coming back from another page; load only the first time.
 onMounted(() => {
@@ -108,9 +120,9 @@ onMounted(() => {
               <button
                 v-if="row.status === 'BOOKED'"
                 type="button"
-                :disabled="store.checkingIn === row.appointmentId"
+                :aria-disabled="store.checkingIn === row.appointmentId"
                 class="link-action"
-                @click.stop="store.checkIn(row)"
+                @click.stop="checkIn(row, $event)"
               >
                 報到
               </button>

@@ -93,7 +93,7 @@ const numberFields: { key: NumberKey; label: string; unit: string; min: number; 
         <input :id="`${uid}-note`" v-model="form.note" maxlength="200" class="form-control" />
       </div>
     </div>
-    <p class="form-hint mt-3">至少填一項數值；收縮壓與舒張壓要一起填。</p>
+    <p class="form-hint mt-3">至少填一項數值；收縮壓與舒張壓要一起填，收縮壓要大於舒張壓。</p>
 
     <p v-if="error" class="alert-error mt-3" role="alert">{{ error }}</p>
 

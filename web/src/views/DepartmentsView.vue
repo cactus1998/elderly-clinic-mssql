@@ -65,6 +65,7 @@ async function save() {
 const busyId = ref<number | null>(null)
 
 async function toggleStatus(d: Department) {
+  if (busyId.value !== null) return
   const activate = !d.isActive
   const ok = await ui.confirm(
     activate
@@ -141,7 +142,7 @@ async function toggleStatus(d: Department) {
                 <button type="button" class="link-action" @click="openDialog(d)">編輯</button>
                 <button
                   type="button"
-                  :disabled="busyId === d.deptId"
+                  :aria-disabled="busyId === d.deptId"
                   :class="d.isActive ? 'link-action-danger' : 'link-action'"
                   @click="toggleStatus(d)"
                 >

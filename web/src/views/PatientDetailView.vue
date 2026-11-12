@@ -136,7 +136,7 @@ async function save() {
 
 async function toggleStatus() {
   const p = patient.value
-  if (!p) return
+  if (!p || statusBusy.value) return
   const activate = !p.isActive
   const ok = await ui.confirm(
     activate
@@ -187,7 +187,7 @@ async function toggleStatus() {
     <template v-if="patient" #actions>
       <button
         type="button"
-        :disabled="statusBusy"
+        :aria-disabled="statusBusy"
         class="btn"
         :class="patient.isActive ? 'btn-danger-outline' : 'btn-secondary'"
         @click="toggleStatus"

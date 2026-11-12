@@ -16,14 +16,22 @@ const departments = useDepartmentsStore()
 const ui = useUiStore()
 
 const optionsError = ref('')
-onMounted(async () => {
+async function loadOptions() {
   if (departments.options.length > 0) return
+  optionsError.value = ''
   try {
     await departments.loadOptions()
   } catch (e) {
     optionsError.value = e instanceof Error ? e.message : '科別載入失敗'
   }
-})
+}
+onMounted(loadOptions)
+
+/** One retry for everything that failed on this page (list and department options). */
+function retry() {
+  store.load()
+  loadOptions()
+}
 
 const { apply } = useListRoute(store, {
   readFilters: (q) => {
@@ -99,6 +107,7 @@ async function save() {
 const busyId = ref<number | null>(null)
 
 async function toggleStatus(d: Doctor) {
+  if (busyId.value !== null) return
   const activate = !d.isActive
   const ok = await ui.confirm(
     activate
@@ -148,13 +157,11 @@ async function toggleStatus(d: Doctor) {
       </label>
     </div>
 
-    <div v-if="optionsError" class="px-4 pt-4">
-      <p class="alert-error" role="alert">{{ optionsError }}</p>
-    </div>
-    <div v-if="store.error" class="px-4 pt-4">
+    <!-- When the list and the department options both fail (e.g. API down), show one message. -->
+    <div v-if="store.error || optionsError" class="px-4 pt-4">
       <p class="alert-error flex flex-wrap items-center justify-between gap-2" role="alert">
-        {{ store.error }}
-        <button type="button" class="link-action-danger" @click="store.load()">重試</button>
+        {{ store.error || `科別清單載入失敗：${optionsError}` }}
+        <button type="button" class="link-action-danger" @click="retry">重試</button>
       </p>
     </div>
 
@@ -194,7 +201,7 @@ async function toggleStatus(d: Doctor) {
                 <button type="button" class="link-action" @click="openDialog(d)">編輯</button>
                 <button
                   type="button"
-                  :disabled="busyId === d.doctorId"
+                  :aria-disabled="busyId === d.doctorId"
                   :class="d.isActive ? 'link-action-danger' : 'link-action'"
                   @click="toggleStatus(d)"
                 >
