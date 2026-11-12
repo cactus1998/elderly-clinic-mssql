@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 樂齡門診掛號與健康追蹤系統：MS SQL Server + ASP.NET Core 8 Web API（Dapper）+ Vue 3 前端。
-資料全部是假資料。功能與執行方式見 `README.md`。
+資料全部是假資料。功能與執行方式見 `README.md`，範圍與驗收標準見 `docs/PRD-elderly-clinic.md`。
 
 ## 架構分層
 
@@ -16,6 +16,8 @@
 
 ## 規則
 
+- 新功能先寫 PRD（`feature-spec`，只有後端時用 `api-spec`），範圍確認後才實作；實作以 PRD 的範圍為準，完成後回填 PRD 的驗收標準與開發紀錄。
+- 每次修改（包含使用者事後的小調整，例如每頁筆數、測試資料、UI 樣式）都要在同一輪同步更新 PRD：對應功能 PRD 的規格、驗收標準與開發紀錄（「與 PRD 的差異」或「變更紀錄」），以及 `docs/PRD-elderly-clinic.md` 的變更紀錄。流程見 `prd-sync`；程式與 PRD 放同一個 commit，回滾時一起 revert。回覆前確認 PRD 與實作一致。
 - SQL 一律參數化（Dapper 匿名物件），禁止字串串接或插值組 SQL。
 - 多步驟寫入放在交易內；條件式更新用 `WHERE` 加條件，再依影響筆數判斷結果，不要先查再改。
 - 錯誤回應用 `Problem(...)` 或 `ValidationProblem(...)`（ProblemDetails），不回傳例外訊息或堆疊。
@@ -56,9 +58,11 @@ sqlcmd -S localhost\SQLEXPRESS -E -I -f 65001 -i procedures.sql
 
 ## 專案 Skill
 
-一般流程：`api-spec`、`add-api-endpoint`（需要時搭配 `db-change`）、`frontend-feature`、`his-security-check`、`git-commit`。
+一般流程：`feature-spec`（只有後端時用 `api-spec`）、`prd-sync`（每次修改後）、`add-api-endpoint`（需要時搭配 `db-change`）、`frontend-feature`、`his-security-check`、`git-commit`。
 
-- `api-spec`：實作前寫規格與驗收標準，存在 `docs/specs/`。
+- `feature-spec`：實作前寫功能 PRD（前後端與資料庫），存在 `docs/PRD-<slug>.md`，範圍以總規格為準。
+- `prd-sync`：每次修改後把變更同步回 PRD（變更分級、版本、變更紀錄、回滾）。
+- `api-spec`：只有後端的小功能寫 API 規格，存在 `docs/specs/`。
 - `add-api-endpoint`：新增一支 API。
 - `db-change`：修改資料表、約束、索引或預存程序。
 - `his-security-check`：提交前檢查醫療資料安全。

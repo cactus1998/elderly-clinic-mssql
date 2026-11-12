@@ -10,12 +10,22 @@ description: 本專案前端（web/，Vue 3 + TypeScript + Tailwind CSS v4 + Pin
 ```
 web/src/
   api/client.ts     唯一呼叫 fetch 的地方；自動帶 Bearer token，收到 401 通知 auth store 登出
+  router/index.ts   vue-router（hash 模式）；頁面 lazy load；beforeEach 檢查登入
+  views/            路由頁面（XxxView.vue）
+  components/       畫面元件（PascalCase，至少兩個單字）與共用元件（AppLayout、AppDialog、PaginationBar、StatusBadge…）
+  composables/      usePagedQuery（分頁查詢）、useListRoute（清單與網址同步）、routeQuery（解析 query）
   stores/           Pinia setup store（useXxxStore）
-  components/       畫面元件（PascalCase，至少兩個單字，例如 ClinicList.vue）
-  App.vue           版面組裝
+  App.vue           只放 RouterView
 ```
 
-目前是單頁，沒有 vue-router。需要第二個頁面時先詢問使用者，再加 router（hash 模式），不要自行引入。
+## 路由與頁面
+
+- 新頁面加在 `router/index.ts` 的 AppLayout children，元件用 `() => import(...)` lazy load，`meta.title` 設定分頁標題。
+- 只有 `/login` 標 `meta.public`；其餘頁面都要登入。登入後導回的 `redirect` 一律經過 `safeRedirect`。
+- 路由參數用 `props` 傳給頁面（例如 `props: (r) => ({ id: Number(r.params.id) })`），頁面不直接讀 `route.params`。
+- 清單頁的分頁與篩選放網址 query，用 `useListRoute` 同步：使用者操作改網址，網址變動才查詢。病人搜尋關鍵字等個資不放網址，只存在 store。
+- 刪除、停用等不可逆或影響大的操作用 `useUiStore().confirm(...)`（自訂對話框），不用瀏覽器 `confirm()`；完成後用 `showToast(...)` 提示。
+- 對話框用 `AppDialog`（原生 `<dialog>` + `showModal()`，焦點與 Esc 由瀏覽器處理）。
 
 ## 型別
 
@@ -57,11 +67,20 @@ web/src/
 - 後端 `DateTime` 序列化為不含時區的 ISO 字串（`2026-11-05T08:00:00`），代表台灣當地時間，不要用 `new Date()` 轉成 UTC。
 - 送給 API 的日期用本地日期 `yyyy-MM-dd`；不要用 `toISOString()`（會變成 UTC 日期）。
 
-## 樣式
+## 樣式（UI 規範見 `docs/PRD-ui-standards.md`）
 
-- 使用 Tailwind utility class，不寫 scoped CSS，除非 Tailwind 做不到。
-- 狀態徽章顏色集中在對照表（`statusClass`），同一狀態全站同一顏色，且一定附文字，不只靠顏色。
-- 版面 mobile-first：手機寬度單欄，`lg:` 以上才分欄；寬表格外層加 `overflow-x-auto`。
+- 按鈕、表單、卡片、表格、提示一律用 `src/assets/main.css` 的共用 class，不要在元件裡重新拼一套：
+  - 按鈕：`btn` 加 `btn-primary` / `btn-secondary` / `btn-danger` / `btn-danger-outline`，小尺寸再加 `btn-sm`；表格列內操作用 `link-action` / `link-action-danger`
+  - 表單：`form-label`、`form-control`、`form-hint`，必填用 `required-mark` 加 `sr-only`「（必填）」
+  - 卡片：`card`、`card-header`、`card-title`、`card-body`、`card-footer`、`toolbar`
+  - 表格：`data-table`；數值欄 `num`、單位 `unit`、操作欄 `col-actions`
+  - 狀態：`alert-error`、`alert-info`、`empty-state` / `empty-state-title`、`badge`
+- Tailwind utility 只用在版面（flex、grid、間距、寬度）。
+- 每頁用 `PageHeader` 放唯一的 `h1` 與主要操作；一個區塊只有一個主要按鈕。
+- 分頁放卡片頁尾：`<PaginationBar class="card-footer mt-auto" />`，卡片加 `flex flex-col`。
+- 表單與對話框的按鈕靠右，順序是「取消、主要按鈕」。
+- 狀態徽章顏色集中在對照表，同一狀態全站同一顏色，且一定附文字，不只靠顏色。
+- 版面 mobile-first：手機單欄，`lg:` 以上才分欄；寬表格外層加 `overflow-x-auto`。
 - 畫面文案不寫方位（左側、右側、上方、下方），RWD 換版後方位會錯。改用區塊名稱，例如「門診清單中的病人」「生命徵象面板」。
 
 ## 病人資料（個資）
