@@ -15,91 +15,113 @@ const statusLabel: Record<AppointmentStatus, string> = {
 }
 
 const statusClass: Record<AppointmentStatus, string> = {
-  BOOKED: 'bg-amber-100 text-amber-800',
-  CHECKED_IN: 'bg-emerald-100 text-emerald-800',
-  DONE: 'bg-slate-200 text-slate-700',
-  CANCELLED: 'bg-rose-100 text-rose-800',
+  BOOKED: 'bg-amber-50 text-amber-800 ring-amber-600/20',
+  CHECKED_IN: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
+  DONE: 'bg-slate-100 text-slate-600 ring-slate-500/20',
+  CANCELLED: 'bg-rose-50 text-rose-700 ring-rose-600/20',
 }
 
-onMounted(store.loadList)
+const isSelected = (appointmentId: number) => store.selected?.appointmentId === appointmentId
+
+// Keep the previous query when coming back from another page; load only the first time.
+onMounted(() => {
+  if (!store.loaded) store.loadList()
+})
 </script>
 
 <template>
-  <section class="rounded-xl bg-white p-4 shadow-sm">
-    <form class="mb-4 flex flex-wrap items-end gap-3" @submit.prevent="store.loadList">
-      <label class="flex flex-col text-sm text-slate-600">
-        看診日期
-        <input v-model="store.date" type="date" required class="mt-1 rounded border px-2 py-1" />
-      </label>
-      <label class="flex flex-col text-sm text-slate-600">
-        科別
-        <select v-model="store.deptName" class="mt-1 rounded border px-2 py-1">
-          <option value="">全部</option>
+  <section class="card flex min-w-0 flex-col" aria-label="門診清單">
+    <form class="toolbar justify-start" @submit.prevent="store.loadList">
+      <div>
+        <label for="clinic-date" class="form-label">看診日期</label>
+        <input id="clinic-date" v-model="store.date" type="date" required class="form-control w-44" />
+      </div>
+      <div>
+        <label for="clinic-dept" class="form-label">科別</label>
+        <select id="clinic-dept" v-model="store.deptName" class="form-control w-36">
+          <option value="">全部科別</option>
           <option v-for="d in store.deptNames" :key="d" :value="d">{{ d }}</option>
         </select>
-      </label>
-      <button
-        type="submit"
-        :disabled="store.loading"
-        class="rounded bg-sky-600 px-4 py-1.5 text-white hover:bg-sky-700 disabled:opacity-50"
-      >
+      </div>
+      <button type="submit" :disabled="store.loading" class="btn btn-primary">
         {{ store.loading ? '查詢中…' : '查詢' }}
       </button>
     </form>
 
-    <p v-if="store.error" class="mb-3 rounded bg-rose-50 px-3 py-2 text-sm text-rose-700">
-      {{ store.error }}
-    </p>
+    <div v-if="store.error" class="px-4 pt-4">
+      <p class="alert-error" role="alert">{{ store.error }}</p>
+    </div>
 
-    <div class="overflow-x-auto">
-      <table class="w-full text-left text-sm">
-        <thead class="border-b text-slate-500">
+    <p v-if="store.loading && store.list.length === 0" class="empty-state" role="status">載入中…</p>
+
+    <div
+      v-else-if="store.loaded && !store.loading && !store.error && store.filtered.length === 0"
+      class="empty-state"
+    >
+      <p class="empty-state-title">這一天沒有門診</p>
+      <p>可以改選其他日期，或到病人頁查詢病人、新增生命徵象。</p>
+      <RouterLink to="/patients" class="btn btn-secondary btn-sm mt-2">前往病人</RouterLink>
+    </div>
+
+    <div v-else-if="store.filtered.length > 0" class="overflow-x-auto" :class="{ 'opacity-60': store.loading }">
+      <table class="data-table">
+        <thead>
           <tr>
-            <th class="py-2 pr-3">科別</th>
-            <th class="py-2 pr-3">醫師</th>
-            <th class="py-2 pr-3">診別</th>
-            <th class="py-2 pr-3">號碼</th>
-            <th class="py-2 pr-3">病歷號</th>
-            <th class="py-2 pr-3">姓名</th>
-            <th class="py-2 pr-3">狀態</th>
-            <th class="py-2"></th>
+            <th scope="col">科別</th>
+            <th scope="col">醫師</th>
+            <th scope="col">診別</th>
+            <th scope="col" class="num">號碼</th>
+            <th scope="col">病歷號</th>
+            <th scope="col">姓名</th>
+            <th scope="col">狀態</th>
+            <th scope="col" class="col-actions">操作</th>
           </tr>
         </thead>
         <tbody>
           <tr
             v-for="row in store.filtered"
             :key="row.appointmentId"
-            class="cursor-pointer border-b last:border-0 hover:bg-slate-50"
-            :class="{ 'bg-sky-50': store.selected?.appointmentId === row.appointmentId }"
+            class="cursor-pointer"
+            :class="{ 'bg-sky-50 shadow-[inset_3px_0_0_var(--color-sky-600)] hover:bg-sky-50': isSelected(row.appointmentId) }"
             @click="store.selectPatient(row)"
           >
-            <td class="py-2 pr-3">{{ row.deptName }}</td>
-            <td class="py-2 pr-3">{{ row.doctorName }}</td>
-            <td class="py-2 pr-3">{{ sessionLabel[row.session] }}</td>
-            <td class="py-2 pr-3">{{ row.seqNo }}</td>
-            <td class="py-2 pr-3 font-mono">{{ row.chartNo }}</td>
-            <td class="py-2 pr-3">{{ row.patientName }}</td>
-            <td class="py-2 pr-3">
-              <span class="rounded px-2 py-0.5 text-xs" :class="statusClass[row.status]">
-                {{ statusLabel[row.status] }}
-              </span>
+            <td>{{ row.deptName }}</td>
+            <td>{{ row.doctorName }}</td>
+            <td>{{ sessionLabel[row.session] }}</td>
+            <td class="num">{{ row.seqNo }}</td>
+            <td class="font-mono text-slate-600">{{ row.chartNo }}</td>
+            <td>
+              <!-- Real button so the row can be selected with the keyboard. -->
+              <button
+                type="button"
+                class="link-action"
+                :aria-pressed="isSelected(row.appointmentId)"
+                @click.stop="store.selectPatient(row)"
+              >
+                {{ row.patientName }}
+              </button>
             </td>
-            <td class="py-2 text-right">
+            <td>
+              <span class="badge" :class="statusClass[row.status]">{{ statusLabel[row.status] }}</span>
+            </td>
+            <td class="col-actions">
               <button
                 v-if="row.status === 'BOOKED'"
+                type="button"
                 :disabled="store.checkingIn === row.appointmentId"
-                class="rounded border border-emerald-600 px-2 py-0.5 text-xs text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
+                class="link-action"
                 @click.stop="store.checkIn(row)"
               >
                 報到
               </button>
             </td>
           </tr>
-          <tr v-if="!store.loading && store.filtered.length === 0">
-            <td colspan="8" class="py-6 text-center text-slate-400">沒有門診資料</td>
-          </tr>
         </tbody>
       </table>
     </div>
+
+    <p v-if="store.filtered.length > 0" class="card-footer mt-auto text-sm text-slate-600 tabular-nums">
+      共 {{ store.filtered.length }} 筆
+    </p>
   </section>
 </template>

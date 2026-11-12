@@ -3,6 +3,8 @@ import { defineStore } from 'pinia'
 import type { CurrentUser } from '@api-types/clinic-api'
 import { api, ApiError, onUnauthorized, setAccessToken } from '@/api/client'
 import { useClinicStore } from '@/stores/clinic'
+import { useDepartmentsStore, useDoctorsStore, usePatientsStore } from '@/stores/masterData'
+import { useVitalsStore } from '@/stores/vitals'
 
 // sessionStorage: survives page refresh, cleared when the tab is closed.
 // Only the access token is stored here, never patient data.
@@ -37,6 +39,8 @@ export const useAuthStore = defineStore('auth', () => {
   const checking = ref(false) // validating a stored token on startup
   const loggingIn = ref(false)
   const error = ref('')
+  /** True when the session ended because the token expired (vs. user clicked logout). */
+  const expired = ref(false)
 
   const isLoggedIn = computed(() => token.value !== null && user.value !== null)
 
@@ -49,6 +53,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function login(username: string, password: string) {
     loggingIn.value = true
     error.value = ''
+    expired.value = false
     try {
       const res = await api.login({ username, password })
       applyToken(res.accessToken)
@@ -66,26 +71,35 @@ export const useAuthStore = defineStore('auth', () => {
     applyToken(null)
     user.value = null
     useClinicStore().reset()
+    useVitalsStore().reset()
+    usePatientsStore().reset()
+    useDoctorsStore().reset()
+    useDepartmentsStore().reset()
   }
 
-  /** On page load: if a token is stored, confirm it is still valid. */
-  async function restore() {
-    if (!token.value) return
-    setAccessToken(token.value)
-    checking.value = true
-    try {
-      user.value = await api.me()
-    } catch {
-      logout()
-    } finally {
-      checking.value = false
-    }
+  /** On page load: if a token is stored, confirm it is still valid. Runs once; callers await it. */
+  let restoring: Promise<void> | null = null
+  function restore(): Promise<void> {
+    restoring ??= (async () => {
+      if (!token.value) return
+      setAccessToken(token.value)
+      checking.value = true
+      try {
+        user.value = await api.me()
+      } catch {
+        logout()
+      } finally {
+        checking.value = false
+      }
+    })()
+    return restoring
   }
 
   onUnauthorized(() => {
     logout()
+    expired.value = true
     error.value = '登入已過期，請重新登入'
   })
 
-  return { token, user, checking, loggingIn, error, isLoggedIn, login, logout, restore }
+  return { token, user, checking, loggingIn, error, expired, isLoggedIn, login, logout, restore }
 })

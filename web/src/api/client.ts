@@ -3,11 +3,35 @@ import type {
   CheckInResult,
   ClinicListItem,
   CurrentUser,
+  Department,
+  DepartmentInput,
+  Doctor,
+  DoctorInput,
   LoginRequest,
+  PagedResult,
+  Patient,
+  PatientInput,
+  PatientListItem,
   ProblemDetails,
   VitalSign,
   VitalSignInput,
 } from '@api-types/clinic-api'
+
+export interface PageParams {
+  page: number
+  pageSize: number
+}
+
+/** Build a query string, skipping undefined / null / '' values. */
+function qs(params: object): string {
+  const q = new URLSearchParams()
+  for (const [k, v] of Object.entries(params) as [string, string | number | boolean | null | undefined][]) {
+    if (v !== undefined && v !== null && v !== '') q.set(k, String(v))
+  }
+  return q.toString()
+}
+
+const json = (method: string, body: unknown): RequestInit => ({ method, body: JSON.stringify(body) })
 
 /** Error thrown when the API returns a non-2xx response. */
 export class ApiError extends Error {
@@ -78,8 +102,10 @@ export const api = {
     return request<ClinicListItem[]>(`/api/clinic?${q}`)
   },
 
-  getVitals(patientId: number, days: number) {
-    return request<VitalSign[]>(`/api/patients/${patientId}/vitals?days=${days}`)
+  getVitals(patientId: number, days: number, paging: PageParams) {
+    return request<PagedResult<VitalSign>>(
+      `/api/patients/${patientId}/vitals?${qs({ days, ...paging })}`,
+    )
   },
 
   createVital(patientId: number, input: VitalSignInput) {
@@ -104,5 +130,50 @@ export const api = {
     return request<CheckInResult>(`/api/appointments/${appointmentId}/checkin`, {
       method: 'PATCH',
     })
+  },
+
+  // ---- Departments ----
+  listDepartments(params: PageParams & { includeInactive?: boolean }) {
+    return request<PagedResult<Department>>(`/api/departments?${qs(params)}`)
+  },
+  createDepartment(input: DepartmentInput) {
+    return request<Department>('/api/departments', json('POST', input))
+  },
+  updateDepartment(id: number, input: DepartmentInput) {
+    return request<Department>(`/api/departments/${id}`, json('PUT', input))
+  },
+  setDepartmentStatus(id: number, isActive: boolean) {
+    return request<Department>(`/api/departments/${id}/status`, json('PATCH', { isActive }))
+  },
+
+  // ---- Doctors ----
+  listDoctors(params: PageParams & { deptId?: number | null; includeInactive?: boolean }) {
+    return request<PagedResult<Doctor>>(`/api/doctors?${qs(params)}`)
+  },
+  createDoctor(input: DoctorInput) {
+    return request<Doctor>('/api/doctors', json('POST', input))
+  },
+  updateDoctor(id: number, input: DoctorInput) {
+    return request<Doctor>(`/api/doctors/${id}`, json('PUT', input))
+  },
+  setDoctorStatus(id: number, isActive: boolean) {
+    return request<Doctor>(`/api/doctors/${id}/status`, json('PATCH', { isActive }))
+  },
+
+  // ---- Patients ----
+  listPatients(params: PageParams & { keyword?: string; includeInactive?: boolean }) {
+    return request<PagedResult<PatientListItem>>(`/api/patients?${qs(params)}`)
+  },
+  getPatient(id: number) {
+    return request<Patient>(`/api/patients/${id}`)
+  },
+  createPatient(input: PatientInput) {
+    return request<Patient>('/api/patients', json('POST', input))
+  },
+  updatePatient(id: number, input: PatientInput) {
+    return request<Patient>(`/api/patients/${id}`, json('PUT', input))
+  },
+  setPatientStatus(id: number, isActive: boolean) {
+    return request<Patient>(`/api/patients/${id}/status`, json('PATCH', { isActive }))
   },
 }

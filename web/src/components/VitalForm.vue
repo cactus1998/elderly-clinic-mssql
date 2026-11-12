@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, useId } from 'vue'
 import type { VitalSign, VitalSignInput } from '@api-types/clinic-api'
 
 const { initial = null, saving = false, error = '' } = defineProps<{
@@ -50,57 +50,56 @@ function submit() {
   })
 }
 
-const inputClass = 'mt-1 w-full rounded border px-2 py-1'
+const uid = useId()
+
+type NumberKey = 'systolicBP' | 'diastolicBP' | 'heartRate' | 'bloodSugar' | 'bodyWeight'
+const numberFields: { key: NumberKey; label: string; unit: string; min: number; max: number; step?: number }[] = [
+  { key: 'systolicBP', label: '收縮壓', unit: 'mmHg', min: 50, max: 260 },
+  { key: 'diastolicBP', label: '舒張壓', unit: 'mmHg', min: 30, max: 160 },
+  { key: 'heartRate', label: '心跳', unit: '次/分', min: 20, max: 250 },
+  { key: 'bloodSugar', label: '血糖', unit: 'mg/dL', min: 20, max: 800 },
+  { key: 'bodyWeight', label: '體重', unit: 'kg', min: 10, max: 300, step: 0.1 },
+]
 </script>
 
 <template>
-  <form class="mb-4 rounded-lg border border-sky-200 bg-sky-50 p-3" @submit.prevent="submit">
-    <h3 class="mb-2 text-sm font-semibold text-slate-700">{{ initial ? '編輯量測' : '新增量測' }}</h3>
+  <form class="border-b border-slate-200 bg-slate-50 px-4 py-4" @submit.prevent="submit">
+    <h3 class="mb-3 text-sm font-semibold text-slate-900">{{ initial ? '編輯量測' : '新增量測' }}</h3>
 
-    <div class="grid grid-cols-2 gap-2 text-sm text-slate-600 sm:grid-cols-3">
-      <label class="col-span-2 sm:col-span-3">
-        量測時間
-        <input v-model="form.measuredAt" type="datetime-local" required :class="inputClass" />
-      </label>
-      <label>
-        收縮壓（50–260）
-        <input v-model="form.systolicBP" type="number" min="50" max="260" :class="inputClass" />
-      </label>
-      <label>
-        舒張壓（30–160）
-        <input v-model="form.diastolicBP" type="number" min="30" max="160" :class="inputClass" />
-      </label>
-      <label>
-        心跳（20–250）
-        <input v-model="form.heartRate" type="number" min="20" max="250" :class="inputClass" />
-      </label>
-      <label>
-        血糖（20–800）
-        <input v-model="form.bloodSugar" type="number" min="20" max="800" :class="inputClass" />
-      </label>
-      <label>
-        體重 kg（10–300）
-        <input v-model="form.bodyWeight" type="number" min="10" max="300" step="0.1" :class="inputClass" />
-      </label>
-      <label class="col-span-2 sm:col-span-3">
-        備註
-        <input v-model="form.note" maxlength="200" :class="inputClass" />
-      </label>
+    <div class="grid grid-cols-2 gap-x-3 gap-y-3 sm:grid-cols-3">
+      <div class="col-span-2 sm:col-span-3">
+        <label :for="`${uid}-at`" class="form-label">量測時間<span class="required-mark" aria-hidden="true">*</span><span class="sr-only">（必填）</span></label>
+        <input :id="`${uid}-at`" v-model="form.measuredAt" type="datetime-local" required class="form-control sm:w-64" />
+      </div>
+      <div v-for="f in numberFields" :key="f.key">
+        <label :for="`${uid}-${f.key}`" class="form-label">
+          {{ f.label }} <span class="font-normal text-slate-500">{{ f.unit }}</span>
+        </label>
+        <input
+          :id="`${uid}-${f.key}`"
+          v-model="form[f.key]"
+          type="number"
+          inputmode="decimal"
+          :min="f.min"
+          :max="f.max"
+          :step="f.step ?? 1"
+          :aria-describedby="`${uid}-${f.key}-hint`"
+          class="form-control"
+        />
+        <p :id="`${uid}-${f.key}-hint`" class="form-hint">{{ f.min }}–{{ f.max }}</p>
+      </div>
+      <div class="col-span-2 sm:col-span-3">
+        <label :for="`${uid}-note`" class="form-label">備註</label>
+        <input :id="`${uid}-note`" v-model="form.note" maxlength="200" class="form-control" />
+      </div>
     </div>
+    <p class="form-hint mt-3">至少填一項數值；收縮壓與舒張壓要一起填。</p>
 
-    <p v-if="error" class="mt-2 rounded bg-rose-50 px-3 py-2 text-sm text-rose-700" role="alert">{{ error }}</p>
+    <p v-if="error" class="alert-error mt-3" role="alert">{{ error }}</p>
 
-    <div class="mt-3 flex gap-2">
-      <button
-        type="submit"
-        :disabled="saving"
-        class="rounded bg-sky-600 px-4 py-1 text-sm text-white hover:bg-sky-700 disabled:opacity-50"
-      >
-        {{ saving ? '儲存中…' : '儲存' }}
-      </button>
-      <button type="button" class="rounded border px-4 py-1 text-sm hover:bg-white" @click="emit('cancel')">
-        取消
-      </button>
+    <div class="mt-4 flex justify-end gap-2">
+      <button type="button" class="btn btn-secondary" @click="emit('cancel')">取消</button>
+      <button type="submit" :disabled="saving" class="btn btn-primary">{{ saving ? '儲存中…' : '儲存' }}</button>
     </div>
   </form>
 </template>
