@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-樂齡門診掛號與健康追蹤系統：MS SQL Server + ASP.NET Core 8 Web API（Dapper）+ Vue 3 前端。
+門診資訊系統：MS SQL Server + ASP.NET Core 8 Web API（Dapper）+ Vue 3 前端。
 資料全部是假資料。功能與執行方式見 `README.md`，範圍與驗收標準見 `docs/PRD-elderly-clinic.md`。
 
 ## 架構分層
@@ -41,7 +41,8 @@ dotnet run                   # Swagger: http://localhost:5268/swagger
 
 ```powershell
 cd web
-npm run build                # vue-tsc 型別檢查 + vite build，必須無錯誤
+npm run test:run             # Vitest 單元測試，必須全部通過
+npm run build                # vue-tsc 型別檢查（含測試檔）+ vite build，必須無錯誤
 npm run dev                  # http://localhost:5173（API 要先啟動）
 ```
 
@@ -72,5 +73,5 @@ sqlcmd -S localhost\SQLEXPRESS -E -I -f 65001 -i procedures.sql
 
 - `vue-conventions`：撰寫或修改 `web/src` 時套用的規範（元件、Pinia、API 呼叫、型別共用、個資）。
 - `frontend-feature`：新增前端功能區塊；後端不夠時先走 `add-api-endpoint`。
-- `add-tests`：Vitest 測試 store、api client、元件。首次使用需同意安裝套件。
+- `unit-test`：前端單元與元件測試（Vitest + @vue/test-utils）：依 PRD 驗收標準列案例、AAA、只 mock 邊界、新功能採 TDD。首次使用需同意安裝套件。
 - `ui-review`：展示前的前端檢查清單，只回報，確認後才改。

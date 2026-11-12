@@ -1,4 +1,4 @@
-# 樂齡門診掛號與健康追蹤系統
+# 門診資訊系統
 
 以長者門診為情境的練習專案：MS SQL Server 資料庫、ASP.NET Core 8 Web API（Dapper），加上 Vue 3 前端。
 資料全部是假資料，不含任何真實個資。
@@ -111,6 +111,7 @@ web/src/
 ├─ stores/          auth、clinic、vitals、masterData（病人／醫師／科別清單）、ui（toast、確認對話框）
 ├─ composables/     usePagedQuery（分頁查詢）、useListRoute（清單與網址同步）、routeQuery
 └─ components/      AppLayout、ClinicList、VitalsPanel、VitalsSection、VitalForm、PaginationBar、AppDialog 等
+（各資料夾的 __tests__/ 為 Vitest 單元測試）
 ```
 
 ## 如何執行
@@ -169,6 +170,14 @@ npm run dev
 
 - Swagger：先用 `POST /api/auth/login` 取得 `accessToken`，按右上角「Authorize」貼上，再測其他 API。
 - `api/api.http`：先送「登入」，其他請求會自動帶入 token。
+- 前端單元測試（Vitest，不需要啟動 API 或資料庫）：
+
+  ```powershell
+  cd web
+  npm run test:run     # 執行一次；npm test 為監看模式
+  ```
+
+  測試放在各資料夾的 `__tests__/`：網址參數與登入導向、清單與網址同步、api client、分頁查詢、各 store、分頁列與量測表單。範圍見 [docs/PRD-frontend-unit-tests.md](docs/PRD-frontend-unit-tests.md)。
 
 報到與生命徵象的新增、修改、刪除都會真的寫入資料庫。測完想還原，依序重跑 `schema.sql`、`seed.sql`
 （`seed.sql` 發現已有資料會停止，所以要先跑 `schema.sql` 清空）。
@@ -189,7 +198,7 @@ CLAUDE.md                          專案規範：架構分層、SQL 安全規�
 ├─ git-commit/         提交前預檢與機密掃描，產生繁體中文 Angular 規範的 commit 訊息
 ├─ vue-conventions/    前端規範：元件、Pinia、API 呼叫、共用型別、病人個資不進 localStorage / URL
 ├─ frontend-feature/   新增前端功能：API 方法、store、元件、四種畫面狀態、瀏覽器實測
-├─ add-tests/          前端測試（Vitest + @vue/test-utils）：store、api client、元件
+├─ unit-test/          前端單元測試（Vitest + @vue/test-utils）：純函式、api client、store、元件
 └─ ui-review/          展示前前端檢查：型別一致、競態、錯誤處理、個資、無障礙、RWD
 ```
 

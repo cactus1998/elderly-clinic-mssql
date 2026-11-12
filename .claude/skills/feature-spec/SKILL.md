@@ -94,5 +94,5 @@ stateDiagram-v2
 ## 與實作 skill 的關係
 
 - `db-change`、`add-api-endpoint`、`frontend-feature`：實作以 PRD 的 Must 範圍為準，不額外擴充。
-- `add-tests`：每條 AC 與 EC 至少對應一個測試或 `api.http` 請求。
+- `unit-test`：每條 AC 與 EC 至少對應一個測試或 `api.http` 請求。
 - `ui-review`、`his-security-check`：完成前檢查，結果寫入開發紀錄。

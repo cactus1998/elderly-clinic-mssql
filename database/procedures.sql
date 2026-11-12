@@ -1,5 +1,5 @@
 /* =========================================================
-   樂齡門診掛號與健康追蹤系統：預存程序 (SQL Server)
+   門診資訊系統：預存程序 (SQL Server)
 
    執行順序：schema.sql、seed.sql、procedures.sql
    本檔只用 CREATE OR ALTER，不會刪除或修改資料，可重複執行。

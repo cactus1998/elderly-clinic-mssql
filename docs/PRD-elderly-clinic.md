@@ -1,6 +1,6 @@
-# PRD：樂齡門診掛號與健康追蹤系統（elderly-clinic）
+# PRD：門診資訊系統（elderly-clinic）
 
-> 版本：1.3.0 ｜ 狀態：進行中（Should 未實作） ｜ 最後更新：2026-11-11
+> 版本：1.4.0 ｜ 狀態：進行中（Should 未實作） ｜ 最後更新：2026-11-12
 
 > 全專案總規格。功能 PRD（`PRD-<slug>.md`）的範圍必須落在本文件之內；需要超出時，先更新本文件。
 
@@ -30,6 +30,10 @@
 - 導覽列與多頁面（`vue-router`）；空狀態引導使用者到可操作的頁面
 - 病人、醫師、科別基本資料：新增、編輯、停用與啟用（軟刪除）
 - 所有清單伺服器端分頁（含生命徵象）
+
+**Must（見 [PRD-frontend-unit-tests.md](PRD-frontend-unit-tests.md)）**
+
+- 前端單元測試：網址參數與登入導向、api client、分頁查詢、store、關鍵元件
 
 **Should（尚未實作）**
 
@@ -235,3 +239,6 @@ stateDiagram-v2
 | 2026-11-11 | 前端 UI 規範統一（[PRD-ui-standards.md](PRD-ui-standards.md)）：共用樣式、頁面標題、分頁置底、表格與表單慣例 |
 | 2026-11-11 | 文件流程：所有 PRD 加上版本、狀態與變更紀錄；修改後以 `prd-sync` 同步，程式與 PRD 同一個 commit、一起回滾 |
 | 2026-11-12 | 測試帳號改為 `admin`（密碼見 README「測試帳號」） |
+| 2026-11-12 | 新增 `unit-test` skill（取代 `add-tests`）：前端單元測試規範與流程 |
+| 2026-11-12 | 範圍新增前端單元測試（[PRD-frontend-unit-tests.md](PRD-frontend-unit-tests.md)）：Vitest + @vue/test-utils + jsdom |
+| 2026-11-12 | 單元測試發現並修正清單重複查詢（網址預設值、超出頁碼修正網址）；PRD-master-data 1.2.2 |
