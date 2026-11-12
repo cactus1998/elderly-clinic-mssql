@@ -28,14 +28,19 @@ export function queryBool(query: LocationQuery, key: string): boolean {
   return first(query[key]) === 'true'
 }
 
-/** Drop default values so URLs stay short (page=1, pageSize=20, false flags). */
+/**
+ * Drop default values so URLs stay short (page=1, pageSize=20, false flags).
+ * Values may come from the store (numbers, booleans) or from the URL (strings), so compare as strings.
+ */
 export function cleanQuery(q: Record<string, string | number | boolean | null | undefined>) {
   const out: Record<string, string> = {}
   for (const [k, v] of Object.entries(q)) {
-    if (v === undefined || v === null || v === false || v === '') continue
-    if (k === 'page' && v === 1) continue
-    if (k === 'pageSize' && v === DEFAULT_PAGE_SIZE) continue
-    out[k] = String(v)
+    if (v === undefined || v === null) continue
+    const s = String(v)
+    if (s === '' || s === 'false') continue
+    if (k === 'page' && s === '1') continue
+    if (k === 'pageSize' && s === String(DEFAULT_PAGE_SIZE)) continue
+    out[k] = s
   }
   return out
 }

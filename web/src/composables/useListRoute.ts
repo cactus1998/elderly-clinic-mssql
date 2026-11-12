@@ -33,17 +33,25 @@ export function useListRoute<F extends Record<string, string | number | boolean 
     return cleanQuery({ ...options.writeFilters(), page: list.page, pageSize: list.pageSize })
   }
 
+  // Set when the URL is corrected to match data already loaded, so that URL change does not load again.
+  let correctedKey: string | null = null
+
   watch(
     () => route.query,
     (query) => {
       if (route.name !== routeName) return
+      const skip = correctedKey !== null && queryKey(query) === correctedKey
+      correctedKey = null
+      if (skip) return
       options.readFilters(query)
       list.page = queryPage(query)
       list.pageSize = queryPageSize(query)
       list.load().then(() => {
-        // Page was out of range and the store jumped to the last page: reflect it in the URL.
+        // The URL had an invalid value, or the page was out of range and the store jumped to
+        // the last page: correct the URL without loading the same data again.
         const wanted = currentQuery()
         if (route.query === query && queryKey(wanted) !== queryKey(query)) {
+          correctedKey = queryKey(wanted)
           router.replace({ query: wanted })
         }
       })
