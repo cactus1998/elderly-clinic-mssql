@@ -40,6 +40,10 @@ INSERT INTO dbo.Departments (DeptCode, DeptName) VALUES
     ('META', N'新陳代謝科'),    -- DeptId 3
     ('NEUR', N'神經內科'),      -- DeptId 4
     ('PMR',  N'復健科');        -- DeptId 5
+
+-- 已停用的科別：示範「停用而不刪除」
+INSERT INTO dbo.Departments (DeptCode, DeptName, IsActive) VALUES
+    ('ENT',  N'耳鼻喉科', 0);   -- DeptId 6
 GO
 
 /* ---------------------------------------------------------
@@ -60,7 +64,7 @@ INSERT INTO dbo.Doctors (DeptId, DoctorName, Title, IsActive) VALUES
 GO
 
 /* ---------------------------------------------------------
-   病人：20 位，年齡大約 65 到 86 歲
+   病人：20 位，年齡大約 65 到 86 歲（病歷號指定 A000001 到 A000020）
    --------------------------------------------------------- */
 INSERT INTO dbo.Patients
     (ChartNo, PatientName, Gender, BirthDate, Phone, Address, EmergencyContact, EmergencyPhone)
@@ -85,6 +89,30 @@ VALUES
     ('A000018', N'周金枝', 'F', '1941-12-01', '0900-000-018', N'台南市南區測試路 18 號', N'周文雄（子）', '0911-000-018'),
     ('A000019', N'葉信義', 'M', '1959-06-29', '0900-000-019', N'台南市安平區測試路 19 號', N'葉思妤（女）', '0911-000-019'),
     ('A000020', N'蘇麗卿', 'F', '1956-08-08', NULL,           N'台南市安南區測試路 20 號', N'蘇柏翰（子）', '0911-000-020');
+GO
+
+/* ---------------------------------------------------------
+   分頁測試用：再加 40 位病人，共 60 位
+   每頁 20 筆有 3 頁、每頁 50 筆有 2 頁、每頁 100 筆只有 1 頁。
+   病歷號不指定，由 dbo.seq_ChartNo 自動產生（A000021 到 A000060）。
+   最後一位設為停用，用來測試「含停用」。
+   --------------------------------------------------------- */
+WITH Nums AS (
+    SELECT 1 AS n
+    UNION ALL
+    SELECT n + 1 FROM Nums WHERE n < 40
+)
+INSERT INTO dbo.Patients (PatientName, Gender, BirthDate, Phone, Address, IsActive)
+SELECT
+    CHOOSE((n - 1) % 10 + 1, N'王', N'李', N'張', N'陳', N'林', N'黃', N'吳', N'蔡', N'許', N'鄭')
+      + CHOOSE((n - 1) / 10 + 1, N'淑', N'志', N'美', N'建')
+      + CHOOSE((n - 1) % 4 + 1, N'華', N'明', N'玲', N'雄'),
+    CASE WHEN n % 2 = 0 THEN 'F' ELSE 'M' END,
+    DATEFROMPARTS(1940 + n % 20, 1 + n % 12, 1 + n % 28),
+    '0900-100-' + RIGHT('000' + CAST(n AS VARCHAR(3)), 3),
+    N'台南市北區分頁路 ' + CAST(n AS NVARCHAR(3)) + N' 號',
+    CASE WHEN n = 40 THEN 0 ELSE 1 END
+FROM Nums;
 GO
 
 /* ---------------------------------------------------------
@@ -139,7 +167,7 @@ INSERT INTO dbo.Appointments (PatientId, DoctorId, VisitDate, Session, SeqNo, St
 GO
 
 /* ---------------------------------------------------------
-   生命徵象：每位病人最近 14 天、每天早上 8 點量一次
+   生命徵象：每位病人最近 14 天、每天早上 8 點量一次；王阿明另有大量紀錄供分頁測試
    做法：
    1. 遞迴 CTE (WITH Days AS ...) 產生 0 到 13 的數字，代表「幾天前」。
    2. CROSS JOIN 病人，得到「每位病人 × 14 天」的組合。
@@ -168,6 +196,30 @@ SELECT
 FROM dbo.Patients AS p
 CROSS JOIN Days AS d;
 
+-- 分頁測試用：王阿明（A000001，今天午診有掛號）每天量 4 次、共 30 天。
+-- 最近 7 天 26 筆、14 天 54 筆（每頁 20 筆有 3 頁、50 筆有 2 頁）、30 天 117 筆（每頁 100 筆有 2 頁）。
+-- 今天只有早上 8 點那一筆，避免出現未來時間。
+WITH Days AS (
+    SELECT 1 AS n
+    UNION ALL
+    SELECT n + 1 FROM Days WHERE n < 29
+),
+Hours AS (
+    SELECT h FROM (VALUES (8), (12), (16), (20)) AS t(h)
+)
+INSERT INTO dbo.VitalSigns (PatientId, MeasuredAt, SystolicBP, DiastolicBP, HeartRate, BloodSugar)
+SELECT
+    1,
+    DATEADD(HOUR, hr.h, CAST(DATEADD(DAY, -d.n, @today) AS DATETIME2(0))),
+    118 + (d.n * 7 + hr.h) % 30,
+     70 + (d.n * 3 + hr.h) % 15,
+     60 + (d.n * 5 + hr.h) % 30,
+     95 + (d.n * 11 + hr.h * 3) % 80
+FROM Days AS d
+CROSS JOIN Hours AS hr
+WHERE NOT (hr.h = 8 AND d.n <= 13)   -- 最近 14 天的 8 點已由上面產生
+OPTION (MAXRECURSION 100);
+
 -- 補幾筆有備註的紀錄
 INSERT INTO dbo.VitalSigns (PatientId, MeasuredAt, SystolicBP, DiastolicBP, HeartRate, Note) VALUES
     (3,  DATEADD(HOUR, 14, CAST(@today AS DATETIME2(0))), 172, 98, 88, N'頭暈，複測血壓偏高，已通知醫師'),
@@ -176,10 +228,10 @@ GO
 
 /* ---------------------------------------------------------
    測試帳號（只用於本機練習；部署到外部前必須刪除或更換密碼）
-   帳號 demo，密碼見 README「測試帳號」。這裡只存 PBKDF2 雜湊。
+   帳號 admin，密碼見 README「測試帳號」。這裡只存 PBKDF2 雜湊。
    --------------------------------------------------------- */
 INSERT INTO dbo.Users (Username, PasswordHash, DisplayName) VALUES
-    ('demo', 'PBKDF2-SHA256$100000$FRCkkQTANsvsw3Wm3xdA7w==$85KeJNYLUGhzJG/Eh3Il0VEhPcYlqAawGusRJ9PGijE=', N'示範護理師');
+    ('admin', 'PBKDF2-SHA256$100000$RVt23YjHcwcFjIFXK8clqg==$IFrJeLG20CQrCkZ1dpx3PQ6RNmVsZHXYMSMAyVdzjoc=', N'示範護理師');
 GO
 
 SET NOEXEC OFF;

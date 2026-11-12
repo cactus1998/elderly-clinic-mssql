@@ -16,6 +16,8 @@ builder.Services.AddScoped<PatientRepository>();
 builder.Services.AddScoped<AppointmentRepository>();
 builder.Services.AddScoped<VitalSignRepository>();
 builder.Services.AddScoped<UserRepository>();
+builder.Services.AddScoped<DepartmentRepository>();
+builder.Services.AddScoped<DoctorRepository>();
 
 // 登入後發 Bearer token（.NET 8 內建，token 以 Data Protection 加密，不需另外加套件）。
 // 之後每個請求都要帶 Authorization: Bearer {accessToken}。

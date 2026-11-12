@@ -31,6 +31,7 @@ DROP TABLE IF EXISTS dbo.Patients;
 DROP TABLE IF EXISTS dbo.Doctors;
 DROP TABLE IF EXISTS dbo.Departments;
 DROP TABLE IF EXISTS dbo.Users;
+DROP SEQUENCE IF EXISTS dbo.seq_ChartNo;
 GO
 
 /* ---------------------------------------------------------
@@ -42,6 +43,8 @@ CREATE TABLE dbo.Departments (
     DeptId      INT IDENTITY(1,1) NOT NULL,
     DeptCode    VARCHAR(10)       NOT NULL,   -- 科別代碼，例如 FM（家醫科）
     DeptName    NVARCHAR(50)      NOT NULL,
+    IsActive    BIT               NOT NULL CONSTRAINT DF_Departments_IsActive DEFAULT (1),
+    RowVersion  ROWVERSION        NOT NULL,   -- 樂觀併發控制：每次修改自動改變
     CONSTRAINT PK_Departments PRIMARY KEY (DeptId),
     CONSTRAINT UQ_Departments_DeptCode UNIQUE (DeptCode)
 );
@@ -58,10 +61,24 @@ CREATE TABLE dbo.Doctors (
     DoctorName  NVARCHAR(50)      NOT NULL,
     Title       NVARCHAR(20)      NOT NULL,   -- 主治醫師、主任…
     IsActive    BIT               NOT NULL CONSTRAINT DF_Doctors_IsActive DEFAULT (1),
+    RowVersion  ROWVERSION        NOT NULL,
     CONSTRAINT PK_Doctors PRIMARY KEY (DoctorId),
     CONSTRAINT FK_Doctors_Departments FOREIGN KEY (DeptId)
         REFERENCES dbo.Departments (DeptId)
 );
+GO
+
+-- 醫師清單依科別篩選、停用科別前檢查「仍有在職醫師」
+CREATE INDEX IX_Doctors_DeptId ON dbo.Doctors (DeptId, IsActive);
+GO
+
+/* ---------------------------------------------------------
+   病歷號序號
+   - 新增病人時由 ChartNo 的預設值取號：'A' + 6 位數字。
+   - SEQUENCE 取號不會因為併發而重複（不能用 MAX(ChartNo) + 1）。
+   - seed.sql 直接指定 A000001 到 A000020，所以從 21 開始。
+   --------------------------------------------------------- */
+CREATE SEQUENCE dbo.seq_ChartNo AS INT START WITH 21 INCREMENT BY 1;
 GO
 
 /* ---------------------------------------------------------
@@ -73,7 +90,9 @@ GO
    --------------------------------------------------------- */
 CREATE TABLE dbo.Patients (
     PatientId        INT IDENTITY(1,1) NOT NULL,
-    ChartNo          VARCHAR(10)       NOT NULL,
+    ChartNo          VARCHAR(10)       NOT NULL
+        CONSTRAINT DF_Patients_ChartNo
+        DEFAULT ('A' + RIGHT('000000' + CAST(NEXT VALUE FOR dbo.seq_ChartNo AS VARCHAR(10)), 6)),
     PatientName      NVARCHAR(50)      NOT NULL,
     Gender           CHAR(1)           NOT NULL,   -- M = 男, F = 女
     BirthDate        DATE              NOT NULL,
@@ -83,10 +102,18 @@ CREATE TABLE dbo.Patients (
     EmergencyPhone   VARCHAR(20)       NULL,
     CreatedAt        DATETIME2(0)      NOT NULL CONSTRAINT DF_Patients_CreatedAt DEFAULT (SYSDATETIME()),
     UpdatedAt        DATETIME2(0)      NULL,
+    IsActive         BIT               NOT NULL CONSTRAINT DF_Patients_IsActive DEFAULT (1),
+    RowVersion       ROWVERSION        NOT NULL,
     CONSTRAINT PK_Patients PRIMARY KEY (PatientId),
     CONSTRAINT UQ_Patients_ChartNo UNIQUE (ChartNo),
     CONSTRAINT CK_Patients_Gender CHECK (Gender IN ('M', 'F'))
 );
+GO
+
+-- 病人清單：預設只列啟用中的病人，依病歷號排序分頁；病歷號開頭搜尋也走這個索引
+CREATE INDEX IX_Patients_IsActive_ChartNo
+    ON dbo.Patients (IsActive, ChartNo)
+    INCLUDE (PatientName, Gender, BirthDate, Phone);
 GO
 
 /* ---------------------------------------------------------

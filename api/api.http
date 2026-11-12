@@ -10,8 +10,8 @@ POST {{api_HostAddress}}/api/auth/login
 Content-Type: application/json
 
 {
-  "username": "demo",
-  "password": "Demo@2026"
+  "username": "admin",
+  "password": "admin"
 }
 
 ### 登入失敗（401，不區分帳號或密碼錯誤；1 分鐘內超過 5 次回 429）
@@ -19,7 +19,7 @@ POST {{api_HostAddress}}/api/auth/login
 Content-Type: application/json
 
 {
-  "username": "demo",
+  "username": "admin",
   "password": "wrong"
 }
 
@@ -40,8 +40,8 @@ GET {{api_HostAddress}}/api/clinic?date=2026-11-05
 Accept: application/json
 Authorization: Bearer {{login.response.body.accessToken}}
 
-### 病人最近 14 天生命徵象
-GET {{api_HostAddress}}/api/patients/3/vitals?days=14
+### 病人最近 14 天生命徵象（分頁，回傳 items / totalCount / page / pageSize）
+GET {{api_HostAddress}}/api/patients/3/vitals?days=14&page=1&pageSize=20
 Accept: application/json
 Authorization: Bearer {{login.response.body.accessToken}}
 
@@ -110,5 +110,132 @@ Authorization: Bearer {{login.response.body.accessToken}}
 PATCH {{api_HostAddress}}/api/appointments/10/checkin
 Accept: application/json
 Authorization: Bearer {{login.response.body.accessToken}}
+
+### ---------- 基本資料：科別 ----------
+
+### 科別清單（預設只列啟用中；includeInactive=true 含停用）
+GET {{api_HostAddress}}/api/departments?includeInactive=true&page=1&pageSize=20
+Authorization: Bearer {{login.response.body.accessToken}}
+
+### 新增科別（201；代碼重複 409）
+# @name createDept
+POST {{api_HostAddress}}/api/departments
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.accessToken}}
+
+{
+  "deptCode": "GER",
+  "deptName": "老年醫學科"
+}
+
+### 修改科別（rowVersion 必填；資料已被別人修改時 409）
+PUT {{api_HostAddress}}/api/departments/{{createDept.response.body.deptId}}
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.accessToken}}
+
+{
+  "deptCode": "GER",
+  "deptName": "老年醫學部",
+  "rowVersion": "{{createDept.response.body.rowVersion}}"
+}
+
+### 停用科別（科內還有啟用中的醫師時 409）
+PATCH {{api_HostAddress}}/api/departments/1/status
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.accessToken}}
+
+{
+  "isActive": false
+}
+
+### ---------- 基本資料：醫師 ----------
+
+### 醫師清單（可依科別篩選）
+GET {{api_HostAddress}}/api/doctors?deptId=1&page=1&pageSize=20
+Authorization: Bearer {{login.response.body.accessToken}}
+
+### 新增醫師（201；科別不存在或已停用 409）
+# @name createDoctor
+POST {{api_HostAddress}}/api/doctors
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.accessToken}}
+
+{
+  "deptId": 2,
+  "doctorName": "測試醫師",
+  "title": "主治醫師"
+}
+
+### 修改醫師
+PUT {{api_HostAddress}}/api/doctors/{{createDoctor.response.body.doctorId}}
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.accessToken}}
+
+{
+  "deptId": 2,
+  "doctorName": "測試醫師",
+  "title": "主任",
+  "rowVersion": "{{createDoctor.response.body.rowVersion}}"
+}
+
+### 停用醫師（今天以後還有已掛號的門診時 409）
+PATCH {{api_HostAddress}}/api/doctors/{{createDoctor.response.body.doctorId}}/status
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.accessToken}}
+
+{
+  "isActive": false
+}
+
+### ---------- 基本資料：病人 ----------
+
+### 病人清單（keyword：病歷號開頭或姓名包含；電話遮罩）
+GET {{api_HostAddress}}/api/patients?keyword=A0000&page=1&pageSize=20
+Authorization: Bearer {{login.response.body.accessToken}}
+
+### 病人詳細資料（電話不遮罩；不存在 404）
+GET {{api_HostAddress}}/api/patients/1
+Authorization: Bearer {{login.response.body.accessToken}}
+
+### 新增病人（201；病歷號由資料庫自動產生）
+# @name createPatient
+POST {{api_HostAddress}}/api/patients
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.accessToken}}
+
+{
+  "patientName": "測試病人",
+  "gender": "F",
+  "birthDate": "1950-03-15",
+  "phone": "0911-222-333",
+  "address": null,
+  "emergencyContact": null,
+  "emergencyPhone": null
+}
+
+### 修改病人
+PUT {{api_HostAddress}}/api/patients/{{createPatient.response.body.patientId}}
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.accessToken}}
+
+{
+  "patientName": "測試病人",
+  "gender": "F",
+  "birthDate": "1950-03-15",
+  "phone": "0911-222-444",
+  "address": "台南市測試路 2 號",
+  "emergencyContact": null,
+  "emergencyPhone": null,
+  "rowVersion": "{{createPatient.response.body.rowVersion}}"
+}
+
+### 停用病人（今天以後還有已掛號的門診時 409；停用後生命徵象不能新增、修改、刪除）
+PATCH {{api_HostAddress}}/api/patients/{{createPatient.response.body.patientId}}/status
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.accessToken}}
+
+{
+  "isActive": false
+}
 
 ###
