@@ -78,5 +78,5 @@ router.beforeEach(async (to) => {
 })
 
 router.afterEach((to) => {
-  document.title = to.meta.title ? `${to.meta.title}｜樂齡門診` : '樂齡門診'
+  document.title = to.meta.title ? `${to.meta.title}｜門診資訊系統` : '門診資訊系統'
 })

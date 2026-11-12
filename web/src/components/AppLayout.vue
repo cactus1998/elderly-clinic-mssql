@@ -50,7 +50,7 @@ watch(
     <header class="border-b border-slate-200 bg-white">
       <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-8 px-4 sm:px-6">
         <RouterLink to="/clinic" class="flex h-14 items-center text-base font-semibold text-sky-800">
-          樂齡門診掛號與健康追蹤
+          門診資訊系統
         </RouterLink>
 
         <div class="flex items-center gap-3 lg:order-last">

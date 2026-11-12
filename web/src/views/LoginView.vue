@@ -22,7 +22,7 @@ async function submit() {
   <main class="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12">
     <div class="w-full max-w-sm">
       <div class="mb-6 text-center">
-        <p class="text-lg font-semibold text-sky-800">樂齡門診掛號與健康追蹤</p>
+        <p class="text-lg font-semibold text-sky-800">門診資訊系統</p>
         <h1 class="mt-1 text-2xl font-semibold text-slate-900">登入</h1>
       </div>
 
